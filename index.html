@@ -236,6 +236,46 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .grafico-wrap { position:relative; height:260px; }
 
 input[type=number]::-webkit-inner-spin-button { opacity:.5; }
+
+/* ===== RECIBO ===== */
+.recibo-doc {
+  background:#fff; color:#111; border-radius:10px; padding:50px;
+  max-width:750px; margin:0 auto; font-family:'Barlow',sans-serif;
+  border:1px solid #ddd;
+}
+.recibo-header { text-align:center; border-bottom:3px solid #F5A623; padding-bottom:24px; margin-bottom:28px; }
+.recibo-header .rec-logo-mark { display:flex; align-items:center; justify-content:center; gap:4px; margin-bottom:10px; }
+.recibo-header .rec-bar { height:32px; border-radius:2px; }
+.recibo-header .rec-bar1 { background:#F5A623; transform:skewX(-15deg); width:16px; }
+.recibo-header .rec-bar2 { background:#C0392B; transform:skewX(-15deg); width:12px; }
+.recibo-header .rec-bar3 { background:#888; transform:skewX(-15deg); width:8px; }
+.recibo-header h1 { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:800; letter-spacing:2px; color:#1A1A1A; margin:0; }
+.recibo-header p { color:#888; font-size:12px; letter-spacing:2px; margin:4px 0 0; }
+.recibo-titulo { text-align:center; margin-bottom:24px; }
+.recibo-titulo h2 { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; color:#1A1A1A; letter-spacing:2px; text-transform:uppercase; }
+.recibo-info { display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f9f9f9; border-radius:8px; padding:18px; margin-bottom:24px; }
+.recibo-info .ri-item label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#888; display:block; margin-bottom:2px; }
+.recibo-info .ri-item span { font-size:14px; font-weight:600; color:#111; }
+.recibo-table { width:100%; border-collapse:collapse; margin-bottom:24px; }
+.recibo-table thead tr { background:#F5A623; }
+.recibo-table th { padding:10px 14px; text-align:left; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#1A1A1A; font-weight:700; }
+.recibo-table td { padding:10px 14px; border-bottom:1px solid #eee; font-size:13px; color:#333; }
+.recibo-table tr:last-child td { border-bottom:none; }
+.recibo-total { text-align:right; border-top:2px solid #F5A623; padding-top:16px; margin-bottom:32px; }
+.recibo-total .rt-label { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#888; }
+.recibo-total .rt-value { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:800; color:#F5A623; }
+.recibo-assinatura { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; }
+.recibo-assinatura .ass-box { text-align:center; }
+.recibo-assinatura .ass-linha { border-top:1px solid #333; padding-top:8px; font-size:12px; color:#555; }
+.recibo-rodape { text-align:center; margin-top:32px; font-size:11px; color:#aaa; border-top:1px solid #eee; padding-top:16px; }
+
+@media print {
+  body * { visibility: hidden; }
+  .recibo-doc, .recibo-doc * { visibility: visible; }
+  .recibo-doc { position:fixed; left:0; top:0; width:100%; padding:30px; border:none; box-shadow:none; }
+  .sidebar, .main > *:not(#t-recibo), .toolbar, #t-recibo .card, #t-recibo .page-header { display:none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -297,6 +337,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
       <div class="nav-item" onclick="irPara('lancamentos')"><span class="icon">📋</span> Lançamentos</div>
       <div class="nav-item" onclick="irPara('pagamentos')"><span class="icon">💰</span> A Pagar</div>
       <div class="nav-item" onclick="irPara('finalizados')"><span class="icon">✅</span> Pago / Finalizado</div>
+      <div class="nav-item" onclick="irPara('recibo')"><span class="icon">🧾</span> Recibo</div>
     </div>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sidebar-user">Admin</strong>Administrador</div>
@@ -524,6 +565,46 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
             <tbody id="tb-finalizados"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+
+    <!-- RECIBO -->
+    <div class="tela" id="t-recibo">
+      <div class="page-header"><h2>🧾 Recibo</h2><p>Gerar recibo de pagamento por funcionário</p></div>
+      <div class="card">
+        <div class="filtros" style="margin-bottom:0">
+          <div class="field">
+            <label>Funcionário*</label>
+            <select id="rec-func"><option value="">Selecione...</option></select>
+          </div>
+          <div class="field">
+            <label>Mês</label>
+            <select id="rec-mes">
+              <option value="">Todos</option>
+              <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+              <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+              <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+              <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ano</label>
+            <select id="rec-ano">
+              <option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option>
+            </select>
+          </div>
+          <div class="field" style="align-self:flex-end">
+            <button class="btn btn-primary" onclick="gerarRecibo()">🔍 Gerar Recibo</button>
+          </div>
+        </div>
+      </div>
+      <div id="recibo-area" style="display:none">
+        <div class="toolbar" style="margin-bottom:16px">
+          <div></div>
+          <button class="btn btn-success" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+        </div>
+        <div id="recibo-doc" class="recibo-doc"></div>
       </div>
     </div>
 
@@ -870,7 +951,8 @@ function irPara(tela) {
     'situacoes': carregarSituacoes,
     'lancamentos': carregarLancamentos,
     'pagamentos': carregarPagamentos,
-    'finalizados': carregarFinalizados
+    'finalizados': carregarFinalizados,
+    'recibo': carregarRecibo
   };
   if (loaders[tela]) loaders[tela]();
 }
@@ -1808,6 +1890,123 @@ document.getElementById('dash-mes').value = (new Date().getMonth() + 1).toString
     document.getElementById('lembrar-senha').checked = true;
   }
 })();
+
+// =============================================
+// RECIBO
+// =============================================
+async function carregarRecibo() {
+  const sel = document.getElementById('rec-func');
+  if (sel.options.length <= 1) {
+    const colabs = await sbGet('colaboradores', 'order=nome.asc&select=id,nome&ativo=neq.Não');
+    colabs.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id; opt.textContent = c.nome;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+async function gerarRecibo() {
+  const funcId = document.getElementById('rec-func').value;
+  const mes = document.getElementById('rec-mes').value;
+  const ano = document.getElementById('rec-ano').value;
+  if (!funcId) { toast('Selecione um funcionário.', 'error'); return; }
+
+  const funcNome = document.getElementById('rec-func').options[document.getElementById('rec-func').selectedIndex].text;
+
+  // Buscar lançamentos pagos do funcionário
+  let params = `funcionario_id=eq.${funcId}&pagamento_status=eq.pago&order=data_pagamento.asc`;
+  const todos = await sbGet('lancamentos', params);
+
+  // Filtrar por mês/ano
+  let rows = todos;
+  if (mes || ano) {
+    rows = todos.filter(l => {
+      const dt = l.data_pagamento || '';
+      if (!dt) return false;
+      const [y, m] = dt.split('-');
+      if (mes && m !== mes.padStart(2,'0')) return false;
+      if (ano && y !== ano) return false;
+      return true;
+    });
+  }
+
+  if (!rows.length) { toast('Nenhum pagamento encontrado para este período.', 'error'); return; }
+
+  const total = rows.reduce((s, l) => s + parseFloat(l.valor_total||0), 0);
+  const MESES_NOME = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const periodoLabel = mes ? `${MESES_NOME[parseInt(mes)]} / ${ano}` : ano || 'Todos os períodos';
+  const hoje = new Date().toLocaleDateString('pt-BR');
+
+  const linhas = rows.map(l => `
+    <tr>
+      <td>${l.numero_pedido||'-'}</td>
+      <td>${l.cliente_nome||'-'}</td>
+      <td>${l.tipo_servico||'-'}</td>
+      <td>${l.quantidade||0} ${l.unidade||''}</td>
+      <td>${l.data_pagamento ? new Date(l.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+      <td style="text-align:right;font-weight:600;color:#F5A623">R$ ${parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+    </tr>`).join('');
+
+  document.getElementById('recibo-doc').innerHTML = `
+    <div class="recibo-header">
+      <div class="rec-logo-mark">
+        <div class="rec-bar rec-bar1"></div>
+        <div class="rec-bar rec-bar2"></div>
+        <div class="rec-bar rec-bar3"></div>
+      </div>
+      <h1>TERMOTELHAS WEBER</h1>
+      <p>SISTEMA DE GESTÃO · RECIBO DE PAGAMENTO</p>
+    </div>
+
+    <div class="recibo-titulo">
+      <h2>Recibo de Serviços Prestados</h2>
+    </div>
+
+    <div class="recibo-info">
+      <div class="ri-item"><label>Funcionário</label><span>${funcNome}</span></div>
+      <div class="ri-item"><label>Período</label><span>${periodoLabel}</span></div>
+      <div class="ri-item"><label>Total de Serviços</label><span>${rows.length} serviço(s)</span></div>
+      <div class="ri-item"><label>Data de Emissão</label><span>${hoje}</span></div>
+    </div>
+
+    <table class="recibo-table">
+      <thead>
+        <tr>
+          <th>Nº Pedido</th>
+          <th>Cliente</th>
+          <th>Serviço / Produto</th>
+          <th>Qtd / Un</th>
+          <th>Dt Pagamento</th>
+          <th style="text-align:right">Valor</th>
+        </tr>
+      </thead>
+      <tbody>${linhas}</tbody>
+    </table>
+
+    <div class="recibo-total">
+      <div class="rt-label">Total Recebido</div>
+      <div class="rt-value">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+    </div>
+
+    <div class="recibo-assinatura">
+      <div class="ass-box">
+        <div class="ass-linha">Termotelhas Weber<br><small>Empregador</small></div>
+      </div>
+      <div class="ass-box">
+        <div class="ass-linha">${funcNome}<br><small>Funcionário</small></div>
+      </div>
+    </div>
+
+    <div class="recibo-rodape">
+      Termotelhas Weber · Recibo emitido em ${hoje} · Sistema de Gestão
+    </div>
+  `;
+
+  document.getElementById('recibo-area').style.display = 'block';
+  document.getElementById('recibo-doc').scrollIntoView({ behavior: 'smooth' });
+}
+
 </script>
 </body>
 </html>
