@@ -887,11 +887,11 @@ async function sbDelete(table, id) {
 
 // USUÁRIOS DO SISTEMA
 const USUARIOS = [
-  { user: 'admin',     senha: 'weber2025',  nome: 'Administrador', perfil: 'admin' },
-  { user: 'gerente',   senha: 'weber123',   nome: 'Gerente',       perfil: 'gerente' },
-  { user: 'tecnico01', senha: 'W3ber_2026', nome: 'Técnico 01',    perfil: 'tecnico01' },
-  { user: 'tecnico02', senha: 'W3ber_2026', nome: 'Técnico 02',    perfil: 'tecnico02' },
-  { user: 'financeiro',senha: 'W3ber_2026', nome: 'Financeiro',    perfil: 'financeiro' }
+  { user: 'admin',     senha: 'weber2025',  nome: 'Administrador', perfil: 'admin',      colaborador: null },
+  { user: 'gerente',   senha: 'weber123',   nome: 'Gerente',       perfil: 'gerente',    colaborador: null },
+  { user: 'tecnico01', senha: 'W3ber_2026', nome: 'Técnico 01',    perfil: 'tecnico01',  colaborador: 'Técnico 01' },
+  { user: 'tecnico02', senha: 'W3ber_2026', nome: 'Técnico 02',    perfil: 'tecnico02',  colaborador: 'Técnico 02' },
+  { user: 'financeiro',senha: 'W3ber_2026', nome: 'Financeiro',    perfil: 'financeiro', colaborador: null }
 ];
 
 // TELAS DISPONÍVEIS
@@ -975,6 +975,9 @@ function fazerLogin() {
       localStorage.removeItem('tw_pass');
     }
     usuarioLogado = found;
+    // Carregar vínculo de colaborador salvo (para técnicos)
+    const vinculoSalvo = localStorage.getItem('tw_colab_' + found.perfil);
+    if (vinculoSalvo !== null) usuarioLogado.colaborador = vinculoSalvo;
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('sidebar-user').textContent = found.nome;
@@ -1419,7 +1422,14 @@ async function carregarLancamentos() {
   try {
     let params = 'order=criado_em.desc';
     if (filtro) params += `&situacao=eq.${encodeURIComponent(filtro)}`;
-    const docs = await sbGet('lancamentos', params);
+    let docs = await sbGet('lancamentos', params);
+
+    // Técnicos só veem seus próprios lançamentos
+    const isTecnico = usuarioLogado && usuarioLogado.colaborador;
+    if (isTecnico) {
+      docs = docs.filter(l => (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim());
+    }
+
     if (!docs.length) { tb.innerHTML = '<tr><td colspan="11" class="empty-state"><div class="icon">📋</div><p>Nenhum lançamento.</p></td></tr>'; return; }
     tb.innerHTML = docs.map(l => {
       const totalFmt = 'R$ ' + parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -1437,7 +1447,7 @@ async function carregarLancamentos() {
         <td>${l.data_inicio||'-'}</td>
         <td>
           <button class="btn btn-ghost btn-sm" onclick="editarLanc('${l.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="excluirLanc('${l.id}','tb-lancamentos',11)">🗑️</button>
+          ${!isTecnico ? `<button class="btn btn-danger btn-sm" onclick="excluirLanc('${l.id}','tb-lancamentos',11)">🗑️</button>` : ''}
         </td>
       </tr>`;
     }).join('');
@@ -1954,10 +1964,10 @@ function imprimirRelatorio() { window.print(); }
 // =============================================
 function carregarPermissoes() {
   const perfis = [
-    { perfil: 'gerente',    nome: 'Gerente' },
-    { perfil: 'tecnico01',  nome: 'Técnico 01' },
-    { perfil: 'tecnico02',  nome: 'Técnico 02' },
-    { perfil: 'financeiro', nome: 'Financeiro' }
+    { perfil: 'gerente',    nome: 'Gerente',     tecnico: false },
+    { perfil: 'tecnico01',  nome: 'Técnico 01',  tecnico: true },
+    { perfil: 'tecnico02',  nome: 'Técnico 02',  tecnico: true },
+    { perfil: 'financeiro', nome: 'Financeiro',  tecnico: false }
   ];
   const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin);
   const container = document.getElementById('perm-container');
@@ -1970,6 +1980,24 @@ function carregarPermissoes() {
           style="accent-color:var(--amarelo);width:16px;height:16px;cursor:pointer" />
         ${t.label}
       </label>`).join('');
+
+    // Campo de vínculo para técnicos
+    const vinculoHtml = p.tecnico ? (() => {
+      const usuario = USUARIOS.find(u => u.perfil === p.perfil);
+      const vinculoAtual = localStorage.getItem('tw_colab_' + p.perfil) || (usuario ? usuario.colaborador || '' : '');
+      return `
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase;margin-bottom:8px">🔗 Vínculo com Colaborador</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="vinculo-${p.perfil}" value="${vinculoAtual}"
+            placeholder="Nome exato do colaborador no sistema..."
+            style="flex:1;padding:9px 13px;background:#222;border:1px solid #444;border-radius:6px;color:#EEE;font-size:13px" />
+          <button class="btn btn-primary btn-sm" onclick="salvarVinculo('${p.perfil}')">Salvar</button>
+        </div>
+        <div style="font-size:11px;color:#666;margin-top:6px">⚠️ Digite exatamente como aparece no cadastro de colaboradores</div>
+      </div>`;
+    })() : '';
+
     return `
     <div class="card" style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -1980,9 +2008,19 @@ function carregarPermissoes() {
           <button class="btn btn-ghost btn-sm" onclick="restaurarPadrao('${p.perfil}')">↩️ Padrão</button>
         </div>
       </div>
+      ${vinculoHtml}
       <div class="perm-grid" id="perm-grid-${p.perfil}">${checkboxes}</div>
     </div>`;
   }).join('');
+}
+
+function salvarVinculo(perfil) {
+  const val = document.getElementById('vinculo-' + perfil).value.trim();
+  localStorage.setItem('tw_colab_' + perfil, val);
+  // Atualizar o usuário em memória se estiver logado
+  const u = USUARIOS.find(x => x.perfil === perfil);
+  if (u) u.colaborador = val;
+  toast('Vínculo salvo: ' + (val || '(removido)'), 'success');
 }
 
 function togglePerm(perfil, tela, ativo) {
