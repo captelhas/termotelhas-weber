@@ -2007,7 +2007,7 @@ function restaurarPadrao(perfil) {
   toast('Permissões restauradas para o padrão.', 'info');
 }
 
-
+document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
 
@@ -2015,16 +2015,6 @@ document.querySelectorAll('#dash-ano, #f-pag-ano, #f-fin-ano').forEach(el => {
   el.value = new Date().getFullYear().toString();
 });
 document.getElementById('dash-mes').value = (new Date().getMonth() + 1).toString();
-
-(function() {
-  const u = localStorage.getItem('tw_user');
-  const s = localStorage.getItem('tw_pass');
-  if (u && s) {
-    document.getElementById('login-user').value = u;
-    document.getElementById('login-pass').value = s;
-    document.getElementById('lembrar-senha').checked = true;
-  }
-})();
 
 // =============================================
 // RECIBO
