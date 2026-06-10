@@ -147,6 +147,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .badge-concluido { background:rgba(39,174,96,0.2); color:#58d68d; }
 .badge-pago { background:rgba(39,174,96,0.3); color:#2ecc71; border:1px solid rgba(39,174,96,0.4); }
 .badge-pendente { background:rgba(231,76,60,0.2); color:#f1948a; }
+.badge-parcial { background:rgba(243,156,18,0.2); color:#f5a623; border:1px solid rgba(243,156,18,0.4); }
 
 /* Dashboard */
 .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
@@ -284,6 +285,12 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
   .recibo-doc, .recibo-doc * { visibility: visible; }
   .recibo-doc { position:fixed; left:0; top:0; width:100%; padding:30px; border:none; box-shadow:none; }
   .sidebar, .main > *:not(#t-recibo), .toolbar, #t-recibo .card, #t-recibo .page-header { display:none !important; }
+  /* Suporte a impressão pelo modal de recibo parcial */
+  #modal-recibo-parcial { display:block !important; position:static !important; background:none !important; }
+  #modal-recibo-parcial .modal { box-shadow:none !important; border:none !important; max-width:100% !important; padding:0 !important; }
+  #modal-recibo-parcial h3, #modal-recibo-parcial .modal-close, #modal-recibo-parcial > .modal > div:first-of-type { display:none !important; }
+  #recibo-parcial-doc, #recibo-parcial-doc * { visibility: visible; }
+  #recibo-parcial-doc { position:fixed; left:0; top:0; width:100%; padding:30px; }
 }
 
 </style>
@@ -791,25 +798,41 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
 
 <!-- Modal Pagar -->
 <div class="modal-overlay" id="modal-pagar">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:500px">
     <button class="modal-close" onclick="fecharModal('modal-pagar')" title="Fechar">✕</button>
     <h3>Registrar Pagamento</h3>
     <input type="hidden" id="mpag-id" />
-    <p style="color:#AAA;margin-bottom:18px;font-size:13px">Confirmar pagamento da obra:</p>
+    <input type="hidden" id="mpag-valor-total" />
+    <input type="hidden" id="mpag-valor-pago-anterior" />
     <div id="mpag-resumo" style="background:#222;border-radius:8px;padding:16px;margin-bottom:18px;font-size:13px;color:#CCC;line-height:1.8"></div>
+    <!-- Saldo devedor em destaque -->
+    <div id="mpag-saldo-box" style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:14px 16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#888">Saldo a Pagar</span>
+      <span id="mpag-saldo-label" style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:var(--amarelo)">R$ 0,00</span>
+    </div>
     <div class="form-row cols-2">
-      <div class="field"><label>Data de Pagamento</label><input type="date" id="mpag-data" /></div>
+      <div class="field">
+        <label>Valor Pago Agora <span style="color:var(--amarelo)">*</span></label>
+        <input type="number" id="mpag-valor" step="0.01" min="0.01" placeholder="0,00" oninput="atualizarSaldoPagar()" style="font-size:16px;font-weight:600" />
+      </div>
+      <div class="field"><label>Data do Pagamento</label><input type="date" id="mpag-data" /></div>
+    </div>
+    <div class="form-row cols-2">
       <div class="field"><label>Forma de Pagamento</label>
         <select id="mpag-forma">
           <option>Dinheiro</option><option>PIX</option><option>Transferência</option>
           <option>Cheque</option><option>Cartão</option>
         </select>
       </div>
+      <div class="field"><label>Observação</label><input id="mpag-obs" placeholder="Opcional" /></div>
     </div>
-    <div class="form-row"><div class="field"><label>Observação</label><input id="mpag-obs" /></div></div>
+    <!-- Preview do resultado -->
+    <div id="mpag-preview" style="background:#1a1a1a;border-radius:8px;padding:12px 16px;font-size:12px;color:#888;margin-top:4px;display:none">
+      <span id="mpag-preview-texto"></span>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-pagar')">Cancelar</button>
-      <button class="btn btn-success" onclick="confirmarPagamento()">✅ Confirmar Pago</button>
+      <button class="btn btn-success" onclick="confirmarPagamento()">✅ Confirmar Pagamento</button>
     </div>
   </div>
 </div>
@@ -837,12 +860,42 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
   </div>
 </div>
 
+<!-- Modal Reverter Parcela -->
+<div class="modal-overlay" id="modal-reverter-parcial">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="fecharModal('modal-reverter-parcial')" title="Fechar">✕</button>
+    <h3>↩️ Reverter Parcela</h3>
+    <p style="color:#AAA;font-size:13px;margin-bottom:18px">Selecione a parcela que deseja cancelar:</p>
+    <div id="reverter-resumo" style="background:#222;border-radius:8px;padding:12px 16px;font-size:13px;color:#CCC;margin-bottom:16px;line-height:1.8"></div>
+    <div id="reverter-lista"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-reverter-parcial')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- Modal Recibo Parcial -->
+<div class="modal-overlay" id="modal-recibo-parcial">
+  <div class="modal" style="max-width:680px">
+    <button class="modal-close" onclick="fecharModal('modal-recibo-parcial')" title="Fechar">✕</button>
+    <h3>🧾 Recibo de Pagamento Parcial</h3>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:18px">
+      <button class="btn btn-ghost btn-sm" onclick="fecharModal('modal-recibo-parcial')">Fechar</button>
+      <button class="btn btn-success" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+    <div id="recibo-parcial-doc" class="recibo-doc"></div>
+  </div>
+</div>
 
 <script>
 // =============================================
 // CONFIGURAÇÃO SUPABASE
+// =============================================
+// ATENÇÃO: Para usar pagamentos parciais, execute no Supabase SQL Editor:
+//   ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS valor_pago numeric DEFAULT 0;
 // =============================================
 const SUPABASE_URL = "https://bavzjtypkrkzrkhklymm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhdnpqdHlwa3JrenJraGtseW1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjEyMTEsImV4cCI6MjA5NDc5NzIxMX0.hMFLrQCz-0N1IlwGnswi4IQsbNGd247SY6aiWY31ors";
@@ -1613,7 +1666,8 @@ async function carregarPagamentos() {
   const mes = document.getElementById('f-pag-mes').value;
   const ano = document.getElementById('f-pag-ano').value;
   const func = document.getElementById('f-pag-func').value;
-  let rows = todos.filter(l => l.situacao === 'Concluído' && l.pagamento_status === 'concluido');
+  // Inclui status 'concluido' (pendente) e 'parcial' (parcialmente pago)
+  let rows = todos.filter(l => l.situacao === 'Concluído' && (l.pagamento_status === 'concluido' || l.pagamento_status === 'parcial'));
   if (func) rows = rows.filter(l => l.funcionario_id === func);
   if (mes || ano) {
     rows = rows.filter(l => {
@@ -1626,60 +1680,159 @@ async function carregarPagamentos() {
     });
   }
   if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">💰</div><p>Nenhum lançamento a pagar.</p></td></tr>'; return; }
-  tb.innerHTML = rows.map(l => `<tr data-id="${l.id}">
-    <td><strong>${l.numero_pedido||'-'}</strong></td>
-    <td>${l.cliente_nome||'-'}</td>
-    <td>${l.funcionario_nome||'-'}</td>
-    <td><strong style="color:var(--amarelo)">R$ ${parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></td>
-    <td>${l.data_fim||'-'}</td>
-    <td><span class="badge badge-pendente">A Pagar</span></td>
-    <td style="white-space:nowrap">
-      <button class="btn btn-success btn-sm" onclick="abrirPagar('${l.id}')">💰 Pagar</button>
-      <button class="btn btn-ghost btn-sm" onclick="editarLanc('${l.id}')">✏️</button>
-      <button class="btn btn-danger btn-sm" onclick="excluirLanc('${l.id}','tb-pagamentos',7)">🗑️</button>
-    </td>
-  </tr>`).join('');
+  tb.innerHTML = rows.map(l => {
+    const total = parseFloat(l.valor_total||0);
+    const pago = parseFloat(l.valor_pago||0);
+    const saldo = total - pago;
+    const isParcial = l.pagamento_status === 'parcial';
+    const badgeHtml = isParcial
+      ? `<span class="badge badge-parcial">⚡ Parcial</span>`
+      : `<span class="badge badge-pendente">A Pagar</span>`;
+    const saldoHtml = isParcial
+      ? `<div style="font-size:11px;color:#888;margin-top:2px">Pago: R$ ${pago.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+         <strong style="color:var(--amarelo)">Saldo: R$ ${saldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong>`
+      : `<strong style="color:var(--amarelo)">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong>`;
+    return `<tr data-id="${l.id}">
+      <td><strong>${l.numero_pedido||'-'}</strong></td>
+      <td>${l.cliente_nome||'-'}</td>
+      <td>${l.funcionario_nome||'-'}</td>
+      <td>${saldoHtml}</td>
+      <td>${l.data_fim||'-'}</td>
+      <td>${badgeHtml}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-success btn-sm" onclick="abrirPagar('${l.id}')">💰 Pagar</button>
+        ${isParcial ? `<button class="btn btn-ghost btn-sm" onclick="gerarReciboParcial('${l.id}')" title="Gerar recibo" style="color:var(--amarelo)">🧾</button>` : ''}
+        ${isParcial ? `<button class="btn btn-ghost btn-sm" onclick="abrirReverterParcial('${l.id}')" title="Reverter parcela" style="color:#e74c3c">↩️</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="editarLanc('${l.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="excluirLanc('${l.id}','tb-pagamentos',7)">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 async function abrirPagar(id) {
   const todos = _cacheLancamentos || await getLancamentos();
   const l = todos.find(x => x.id === id);
   if (!l) { toast('Registro não encontrado.','error'); return; }
+
+  let parcelas = [];
+  try { parcelas = await sbGet('pagamentos_parciais', `lancamento_id=eq.${id}&order=data_pagamento.asc`); } catch(e) {}
+
+  const total = parseFloat(l.valor_total||0);
+  const pagoanterior = parcelas.reduce((s,p) => s + parseFloat(p.valor||0), 0);
+  const saldo = total - pagoanterior;
+
   document.getElementById('mpag-id').value = id;
+  document.getElementById('mpag-valor-total').value = total;
+  document.getElementById('mpag-valor-pago-anterior').value = pagoanterior;
   document.getElementById('mpag-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mpag-valor').value = '';
+  document.getElementById('mpag-obs').value = '';
+  document.getElementById('mpag-preview').style.display = 'none';
+  document.getElementById('mpag-saldo-label').textContent = 'R$ ' + saldo.toLocaleString('pt-BR',{minimumFractionDigits:2});
+
+  let historicoHtml = '';
+  if (parcelas.length > 0) {
+    historicoHtml = `<div style="margin-top:10px;border-top:1px solid #333;padding-top:10px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:6px">Pagamentos anteriores</div>
+      ${parcelas.map((p,i) => {
+        const dt = p.data_pagamento ? new Date(p.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+        return `<div style="display:flex;justify-content:space-between;font-size:12px;color:#AAA;margin-bottom:3px">
+          <span>Parcela ${i+1} — ${dt} ${p.forma?'('+p.forma+')':''}</span>
+          <span style="color:#58d68d">R$ ${parseFloat(p.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
   document.getElementById('mpag-resumo').innerHTML = `
     <b>Pedido:</b> ${l.numero_pedido}<br>
     <b>Cliente:</b> ${l.cliente_nome}<br>
     <b>Funcionário:</b> ${l.funcionario_nome}<br>
     <b>Serviço:</b> ${l.tipo_servico}<br>
-    <b>Total:</b> <span style="color:var(--amarelo);font-size:16px;font-weight:700">R$ ${parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+    <b>Total:</b> <span style="color:var(--amarelo);font-size:16px;font-weight:700">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+    ${historicoHtml}
   `;
   abrirModal('modal-pagar');
 }
 
-function confirmarPagamento() {
+function atualizarSaldoPagar() {
+  const total = parseFloat(document.getElementById('mpag-valor-total').value)||0;
+  const pagoAnterior = parseFloat(document.getElementById('mpag-valor-pago-anterior').value)||0;
+  const saldo = total - pagoAnterior;
+  const valorAgora = parseFloat(document.getElementById('mpag-valor').value)||0;
+  const novoSaldo = saldo - valorAgora;
+  const preview = document.getElementById('mpag-preview');
+  const previewTexto = document.getElementById('mpag-preview-texto');
+  if (valorAgora <= 0) { preview.style.display='none'; return; }
+  preview.style.display = 'block';
+  if (valorAgora >= saldo) {
+    previewTexto.innerHTML = '<span style="color:#58d68d">✅ Pagamento total — lançamento será marcado como <strong>Pago</strong></span>';
+  } else {
+    previewTexto.innerHTML = `<span style="color:var(--amarelo)">⚡ Pagamento parcial — saldo restante: <strong>R$ ${novoSaldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></span>`;
+  }
+}
+
+async function confirmarPagamento() {
   const id = document.getElementById('mpag-id').value;
+  const total = parseFloat(document.getElementById('mpag-valor-total').value)||0;
+  const pagoAnterior = parseFloat(document.getElementById('mpag-valor-pago-anterior').value)||0;
+  const saldo = total - pagoAnterior;
+  const valorAgora = parseFloat(document.getElementById('mpag-valor').value)||0;
   const dtPag = document.getElementById('mpag-data').value;
   const forma = document.getElementById('mpag-forma').value;
   const obs = document.getElementById('mpag-obs').value;
+
+  if (!valorAgora || valorAgora <= 0) { toast('Informe o valor pago.','error'); return; }
+  if (valorAgora > saldo + 0.01) { toast('Valor maior que o saldo a pagar (R$ ' + saldo.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ').','error'); return; }
+
+  const novoPago = pagoAnterior + valorAgora;
+  const isPagoTotal = novoPago >= total - 0.01;
+  const novoStatus = isPagoTotal ? 'pago' : 'parcial';
+
   fecharModal('modal-pagar');
-  toast('Pagamento registrado! ✅');
-  const trPag = document.querySelector(`#tb-pagamentos tr[data-id="${id}"]`);
-  if (trPag) trPag.remove();
-  const tbPag = document.getElementById('tb-pagamentos');
-  if (tbPag && tbPag.querySelectorAll('tr[data-id]').length === 0) {
-    tbPag.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">💰</div><p>Nenhum lançamento a pagar.</p></td></tr>';
-  }
+  toast(isPagoTotal ? 'Pagamento total registrado! ✅' : `Parcela de R$ ${valorAgora.toLocaleString('pt-BR',{minimumFractionDigits:2})} registrada! ⚡`);
   invalidarCacheLanc();
-  sbUpdate('lancamentos', id, {
-    pagamento_status: 'pago',
+
+  try {
+    const rParcela = await fetch(`${SUPABASE_URL}/rest/v1/pagamentos_parciais`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ lancamento_id: id, valor: valorAgora, data_pagamento: dtPag, forma: forma, obs: obs })
+    });
+    if (!rParcela.ok) {
+      const errTxt = await rParcela.text();
+      console.warn('Erro ao inserir parcela:', errTxt);
+      toast('Erro ao salvar parcela: ' + errTxt, 'error');
+    }
+  } catch(e) { console.warn('pagamentos_parciais exception:', e.message); toast('Erro de conexão ao salvar parcela.', 'error'); }
+
+  const payload = {
+    pagamento_status: novoStatus,
+    valor_pago: novoPago,
     data_pagamento: dtPag,
     forma_pagamento: forma,
     obs_pagamento: obs
-  })
-  .then(() => irPara('finalizados'))
-  .catch(e => toast('Erro ao registrar: ' + e.message, 'error'));
+  };
+
+  if (isPagoTotal) {
+    const trPag = document.querySelector(`#tb-pagamentos tr[data-id="${id}"]`);
+    if (trPag) trPag.remove();
+    const tbPag = document.getElementById('tb-pagamentos');
+    if (tbPag && tbPag.querySelectorAll('tr[data-id]').length === 0) {
+      tbPag.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">💰</div><p>Nenhum lançamento a pagar.</p></td></tr>';
+    }
+    sbUpdate('lancamentos', id, payload)
+      .then(() => irPara('finalizados'))
+      .catch(e => toast('Erro ao atualizar: ' + e.message, 'error'));
+  } else {
+    sbUpdate('lancamentos', id, payload)
+      .then(() => carregarPagamentos())
+      .catch(e => toast('Erro ao atualizar: ' + e.message, 'error'));
+  }
 }
+
 
 // =============================================
 // FINALIZADOS (PAGOS)
@@ -2168,6 +2321,221 @@ async function gerarRecibo() {
 
   document.getElementById('recibo-area').style.display = 'block';
   document.getElementById('recibo-doc').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function gerarReciboParcial(id) {
+  const todos = _cacheLancamentos || await getLancamentos();
+  const l = todos.find(x => x.id === id);
+  if (!l) { toast('Registro não encontrado.', 'error'); return; }
+
+  let parcelas = [];
+  try { parcelas = await sbGet('pagamentos_parciais', `lancamento_id=eq.${id}&order=data_pagamento.asc`); } catch(e) {}
+  // Fallback: se não achou parcelas na tabela, monta uma parcela a partir do lançamento
+  if (!parcelas.length && parseFloat(l.valor_pago||0) > 0) {
+    parcelas = [{
+      id: 'fallback-1',
+      lancamento_id: l.id,
+      valor: parseFloat(l.valor_pago||0),
+      data_pagamento: l.data_pagamento,
+      forma: l.forma_pagamento,
+      obs: l.obs_pagamento
+    }];
+  }
+  if (!parcelas.length) { toast('Nenhuma parcela registrada para esta obra.', 'error'); return; }
+
+  window._reciboLanc = l;
+  window._reciboParcelas = parcelas;
+
+  if (parcelas.length === 1) {
+    renderReciboParcela(l, parcelas, parcelas[0]);
+  } else {
+    abrirSeletorParcela(l, parcelas);
+  }
+  abrirModal('modal-recibo-parcial');
+}
+
+function abrirSeletorParcela(l, parcelas) {
+  const total = parseFloat(l.valor_total||0);
+  let acumulado = 0;
+  const linhas = parcelas.map((p, i) => {
+    const valor = parseFloat(p.valor||0);
+    acumulado += valor;
+    const saldoApos = total - acumulado;
+    const dt = p.data_pagamento ? new Date(p.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+    return `<div onclick="selecionarParcela('${p.id}')" style="cursor:pointer;background:#222;border:1px solid #333;border-radius:8px;padding:14px 16px;margin-bottom:10px;transition:border-color .15s" onmouseover="this.style.borderColor='#F5A623'" onmouseout="this.style.borderColor='#333'">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#EEE">Parcela ${i+1}</div>
+          <div style="font-size:12px;color:#888;margin-top:2px">${dt}${p.forma ? ' · ' + p.forma : ''}</div>
+          ${p.obs ? '<div style="font-size:11px;color:#666;margin-top:2px">'+p.obs+'</div>' : ''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:700;color:#58d68d">R$ ${valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+          <div style="font-size:11px;color:#888">Saldo após: R$ ${saldoApos.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('recibo-parcial-doc').innerHTML = `
+    <div style="padding:10px 0">
+      <div style="font-size:13px;color:#AAA;margin-bottom:16px">Selecione a parcela para gerar o recibo:</div>
+      <div style="font-size:12px;color:#666;margin-bottom:14px">
+        Pedido <strong style="color:#EEE">${l.numero_pedido}</strong> · ${l.cliente_nome} · Total: <strong style="color:var(--amarelo)">R$ ${parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong>
+      </div>
+      ${linhas}
+    </div>
+  `;
+}
+
+function selecionarParcela(parcelaId) {
+  const l = window._reciboLanc;
+  const parcelas = window._reciboParcelas;
+  const parcela = parcelas.find(p => p.id === parcelaId);
+  if (!l || !parcela) return;
+  renderReciboParcela(l, parcelas, parcela);
+}
+
+function renderReciboParcela(l, todasParcelas, parcelaSelecionada) {
+  const total = parseFloat(l.valor_total||0);
+  const idxAtual = todasParcelas.findIndex(p => p.id === parcelaSelecionada.id);
+  const numParcela = idxAtual + 1;
+  const valorEsta = parseFloat(parcelaSelecionada.valor||0);
+  const pagoAteAgora = todasParcelas.slice(0, idxAtual + 1).reduce((s,p) => s + parseFloat(p.valor||0), 0);
+  const saldoApos = total - pagoAteAgora;
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const dtParcela = parcelaSelecionada.data_pagamento
+    ? new Date(parcelaSelecionada.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR') : hoje;
+
+  const voltarBtn = todasParcelas.length > 1
+    ? '<button onclick="abrirSeletorParcela(window._reciboLanc, window._reciboParcelas)" style="background:#333;border:1px solid #444;color:#AAA;padding:6px 14px;border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:16px">← Voltar para lista de parcelas</button>'
+    : '';
+
+  document.getElementById('recibo-parcial-doc').innerHTML = `
+    ${voltarBtn}
+    <div class="recibo-header">
+      <div class="rec-logo-mark">
+        <div class="rec-bar rec-bar1"></div><div class="rec-bar rec-bar2"></div><div class="rec-bar rec-bar3"></div>
+      </div>
+      <h1>TERMOTELHAS WEBER</h1>
+      <p>SISTEMA DE GESTÃO · RECIBO DE PAGAMENTO PARCIAL</p>
+    </div>
+    <div class="recibo-titulo">
+      <h2>Recibo — Parcela ${numParcela} de ${todasParcelas.length}</h2>
+    </div>
+    <div class="recibo-info">
+      <div class="ri-item"><label>Nº Pedido</label><span>${l.numero_pedido||'-'}</span></div>
+      <div class="ri-item"><label>Data de Emissão</label><span>${hoje}</span></div>
+      <div class="ri-item"><label>Cliente</label><span>${l.cliente_nome||'-'}</span></div>
+      <div class="ri-item"><label>Funcionário</label><span>${l.funcionario_nome||'-'}</span></div>
+      <div class="ri-item"><label>Serviço / Produto</label><span>${l.tipo_servico||'-'}</span></div>
+      <div class="ri-item"><label>Valor Total da Obra</label><span style="font-weight:700">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>
+    </div>
+    <table class="recibo-table">
+      <thead><tr><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Valor desta parcela (${dtParcela})${parcelaSelecionada.forma ? ' — ' + parcelaSelecionada.forma : ''}</td>
+          <td style="text-align:right;font-weight:700;color:#27AE60">R$ ${valorEsta.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+        </tr>
+        <tr style="background:#f9f9f9">
+          <td>Total pago até esta parcela</td>
+          <td style="text-align:right;font-weight:600">R$ ${pagoAteAgora.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+        </tr>
+        <tr style="background:#fff8ee">
+          <td><strong>Saldo restante</strong></td>
+          <td style="text-align:right;font-weight:700;color:#C0392B">R$ ${saldoApos.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="recibo-total">
+      <div class="rt-label">Valor Recebido — Parcela ${numParcela}/${todasParcelas.length}</div>
+      <div class="rt-value">R$ ${valorEsta.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+    </div>
+    ${parcelaSelecionada.obs ? '<div style="margin-bottom:24px;padding:12px 16px;background:#f9f9f9;border-radius:6px;font-size:13px;color:#555"><strong>Observação:</strong> '+parcelaSelecionada.obs+'</div>' : ''}
+    <div class="recibo-assinatura">
+      <div class="ass-box"><div class="ass-linha">Termotelhas Weber<br><small>Empregador</small></div></div>
+      <div class="ass-box"><div class="ass-linha">${l.funcionario_nome||'Funcionário'}<br><small>Funcionário</small></div></div>
+    </div>
+    <div class="recibo-rodape">
+      Termotelhas Weber · Parcela ${numParcela}/${todasParcelas.length} · Emitido em ${hoje} · Sistema de Gestão
+    </div>
+  `;
+}
+
+// ── REVERTER PARCELA ──
+async function abrirReverterParcial(id) {
+  const todos = _cacheLancamentos || await getLancamentos();
+  const l = todos.find(x => x.id === id);
+  if (!l) { toast('Registro não encontrado.', 'error'); return; }
+
+  let parcelas = [];
+  try { parcelas = await sbGet('pagamentos_parciais', `lancamento_id=eq.${id}&order=data_pagamento.asc`); } catch(e) {}
+  if (!parcelas.length) { toast('Nenhuma parcela para reverter.', 'error'); return; }
+
+  window._reverterLanc = l;
+  window._reverterParcelas = parcelas;
+
+  const total = parseFloat(l.valor_total||0);
+  let acum = 0;
+  const linhas = parcelas.map((p, i) => {
+    const valor = parseFloat(p.valor||0);
+    acum += valor;
+    const saldoApos = total - acum;
+    const dt = p.data_pagamento ? new Date(p.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+    return `<div style="background:#222;border:1px solid #3d3d3d;border-radius:8px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#EEE">Parcela ${i+1}</div>
+        <div style="font-size:12px;color:#888;margin-top:2px">${dt}${p.forma ? ' · ' + p.forma : ''}</div>
+        ${p.obs ? '<div style="font-size:11px;color:#666;margin-top:2px">'+p.obs+'</div>' : ''}
+        <div style="font-size:11px;color:#555;margin-top:3px">Saldo após esta: R$ ${saldoApos.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:#58d68d">R$ ${valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+        <button onclick="confirmarReverterParcela('${p.id}')" style="background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.4);color:#e74c3c;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;white-space:nowrap">↩️ Reverter esta</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('reverter-resumo').innerHTML =
+    `<b>Pedido:</b> ${l.numero_pedido} · <b>Cliente:</b> ${l.cliente_nome} · <b>Total:</b> <span style="color:var(--amarelo)">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`;
+  document.getElementById('reverter-lista').innerHTML = linhas;
+  abrirModal('modal-reverter-parcial');
+}
+
+async function confirmarReverterParcela(parcelaId) {
+  if (!confirm('Confirmar reversão desta parcela? O valor será descontado do total pago.')) return;
+  const l = window._reverterLanc;
+  const parcelas = window._reverterParcelas;
+  const parcela = parcelas.find(p => p.id === parcelaId);
+  if (!l || !parcela) return;
+
+  const valorParcela = parseFloat(parcela.valor||0);
+  const totalAtualPago = parseFloat(l.valor_pago||0);
+  const novoPago = Math.max(0, totalAtualPago - valorParcela);
+  const novoStatus = novoPago <= 0 ? 'concluido' : 'parcial';
+
+  try {
+    // Deletar parcela
+    await fetch(`${SUPABASE_URL}/rest/v1/pagamentos_parciais?id=eq.${parcelaId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    });
+    // Atualizar lançamento
+    await sbUpdate('lancamentos', l.id, {
+      valor_pago: novoPago,
+      pagamento_status: novoStatus,
+      data_pagamento: novoStatus === 'concluido' ? null : l.data_pagamento,
+      forma_pagamento: novoStatus === 'concluido' ? null : l.forma_pagamento,
+      obs_pagamento: novoStatus === 'concluido' ? null : l.obs_pagamento
+    });
+    fecharModal('modal-reverter-parcial');
+    toast('Parcela revertida com sucesso! ↩️');
+    invalidarCacheLanc();
+    carregarPagamentos();
+  } catch(e) {
+    toast('Erro ao reverter parcela: ' + e.message, 'error');
+  }
 }
 
 </script>
