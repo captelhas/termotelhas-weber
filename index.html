@@ -516,7 +516,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Funcionário</th><th>Tipo Serviço</th><th>Qtd</th><th>Un</th><th>Valor Unit.</th><th>Total</th><th>Situação</th><th>Início</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Funcionário</th><th>Tipo Serviço</th><th>Qtd</th><th>Un</th><th>Valor Unit.</th><th>Total</th><th>Adiantamento</th><th>Situação</th><th>Início</th><th>Ações</th></tr></thead>
             <tbody id="tb-lancamentos"></tbody>
           </table>
         </div>
@@ -870,6 +870,55 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
     <div id="reverter-lista"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-reverter-parcial')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Adiantamento -->
+<div class="modal-overlay" id="modal-adiantamento">
+  <div class="modal" style="max-width:480px">
+    <button class="modal-close" onclick="fecharModal('modal-adiantamento')" title="Fechar">✕</button>
+    <h3>💵 Registrar Adiantamento</h3>
+    <input type="hidden" id="madi-lanc-id" />
+    <div id="madi-resumo" style="background:#222;border-radius:8px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:#CCC;line-height:1.8"></div>
+    <!-- Box saldo adiantado -->
+    <div id="madi-saldo-box" style="background:rgba(41,128,185,0.08);border:1px solid rgba(41,128,185,0.3);border-radius:8px;padding:14px 16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#888">Total Adiantado</span>
+      <span id="madi-total-label" style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:#5dade2">R$ 0,00</span>
+    </div>
+    <div class="form-row cols-2">
+      <div class="field">
+        <label>Valor do Adiantamento <span style="color:var(--amarelo)">*</span></label>
+        <input type="number" id="madi-valor" step="0.01" min="0.01" placeholder="0,00" style="font-size:16px;font-weight:600" />
+      </div>
+      <div class="field"><label>Data</label><input type="date" id="madi-data" /></div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="field"><label>Forma</label>
+        <select id="madi-forma">
+          <option>Dinheiro</option><option>PIX</option><option>Transferência</option>
+          <option>Cheque</option><option>Cartão</option>
+        </select>
+      </div>
+      <div class="field"><label>Observação</label><input id="madi-obs" placeholder="Opcional" /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-adiantamento')">Cancelar</button>
+      <button class="btn btn-info" onclick="confirmarAdiantamento()">💵 Confirmar Adiantamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Excluir Adiantamento -->
+<div class="modal-overlay" id="modal-excluir-adiant">
+  <div class="modal" style="max-width:500px">
+    <button class="modal-close" onclick="fecharModal('modal-excluir-adiant')" title="Fechar">✕</button>
+    <h3>🗑️ Excluir Adiantamento</h3>
+    <p style="color:#AAA;font-size:13px;margin-bottom:18px">Selecione o adiantamento que deseja excluir:</p>
+    <div id="excluir-adiant-resumo" style="background:#222;border-radius:8px;padding:12px 16px;font-size:13px;color:#CCC;margin-bottom:16px;line-height:1.8"></div>
+    <div id="excluir-adiant-lista"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-excluir-adiant')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -1474,7 +1523,7 @@ async function carregarLancamentos() {
   const tb = document.getElementById('tb-lancamentos');
   try {
     let params = 'order=criado_em.desc';
-    if (filtro) params += `&situacao=eq.${encodeURIComponent(filtro)}`;
+    if (filtro) params += '&situacao=eq.' + encodeURIComponent(filtro);
     let docs = await sbGet('lancamentos', params);
 
     // Técnicos só veem seus próprios lançamentos
@@ -1483,26 +1532,57 @@ async function carregarLancamentos() {
       docs = docs.filter(l => (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim());
     }
 
-    if (!docs.length) { tb.innerHTML = '<tr><td colspan="11" class="empty-state"><div class="icon">📋</div><p>Nenhum lançamento.</p></td></tr>'; return; }
+    if (!docs.length) { tb.innerHTML = '<tr><td colspan="12" class="empty-state"><div class="icon">📋</div><p>Nenhum lançamento.</p></td></tr>'; return; }
+
+    // Buscar todos os adiantamentos de uma vez
+    let todosAdiant = [];
+    try { todosAdiant = await sbGet('adiantamentos', 'order=data.asc'); } catch(e) {}
+
+    // Agrupar adiantamentos por lancamento_id
+    const adiantMap = {};
+    todosAdiant.forEach(a => {
+      if (!adiantMap[a.lancamento_id]) adiantMap[a.lancamento_id] = [];
+      adiantMap[a.lancamento_id].push(a);
+    });
+
     tb.innerHTML = docs.map(l => {
       const totalFmt = 'R$ ' + parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
       const vUnitFmt = 'R$ ' + parseFloat(l.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
-      return `<tr data-id="${l.id}">
-        <td><strong>${l.numero_pedido||'-'}</strong></td>
-        <td>${l.cliente_nome||'-'}</td>
-        <td>${l.funcionario_nome||'-'}</td>
-        <td>${l.tipo_servico||'-'}</td>
-        <td>${l.quantidade||0}</td>
-        <td>${l.unidade||'-'}</td>
-        <td>${vUnitFmt}</td>
-        <td><strong style="color:var(--amarelo)">${totalFmt}</strong></td>
-        <td>${badgeSit(l.situacao)}</td>
-        <td>${l.data_inicio||'-'}</td>
-        <td>
-          <button class="btn btn-ghost btn-sm" onclick="editarLanc('${l.id}')">✏️</button>
-          ${!isTecnico ? `<button class="btn btn-danger btn-sm" onclick="excluirLanc('${l.id}','tb-lancamentos',11)">🗑️</button>` : ''}
-        </td>
-      </tr>`;
+      const total = parseFloat(l.valor_total||0);
+
+      // Adiantamento desta linha
+      const adiants = adiantMap[l.id] || [];
+      const totalAdiant = adiants.reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+      const resta = total - totalAdiant;
+
+      let adiantCell = '';
+      if (totalAdiant > 0) {
+        const corResta = resta <= 0 ? '#58d68d' : '#f5a623';
+        adiantCell = '<div style="font-size:11px;color:#5dade2;font-weight:600">💵 R$ ' + totalAdiant.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>'
+          + '<div style="font-size:10px;color:#888">Resta: <span style="color:' + corResta + ';font-weight:600">R$ ' + Math.max(0,resta).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span></div>'
+          + (!isTecnico ? '<button onclick="abrirExcluirAdiant(\'' + l.id + '\')" style="margin-top:3px;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:10px">🗑️ excluir</button>' : '') ;
+      } else {
+        adiantCell = '<span style="color:#444;font-size:11px">—</span>';
+      }
+
+      return '<tr data-id="' + l.id + '">'
+        + '<td><strong>' + (l.numero_pedido||'-') + '</strong></td>'
+        + '<td>' + (l.cliente_nome||'-') + '</td>'
+        + '<td>' + (l.funcionario_nome||'-') + '</td>'
+        + '<td>' + (l.tipo_servico||'-') + '</td>'
+        + '<td>' + (l.quantidade||0) + '</td>'
+        + '<td>' + (l.unidade||'-') + '</td>'
+        + '<td>' + vUnitFmt + '</td>'
+        + '<td><strong style="color:var(--amarelo)">' + totalFmt + '</strong></td>'
+        + '<td>' + adiantCell + '</td>'
+        + '<td>' + badgeSit(l.situacao) + '</td>'
+        + '<td>' + (l.data_inicio||'-') + '</td>'
+        + '<td style="white-space:nowrap">'
+        + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + l.id + '\')">✏️</button>'
+        + (!isTecnico ? '<button class="btn btn-info btn-sm" onclick="abrirAdiantamento(\'' + l.id + '\')" title="Registrar adiantamento">💵</button>' : '')
+        + (!isTecnico ? '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-lancamentos\',12)">🗑️</button>' : '')
+        + '</td>'
+        + '</tr>';
     }).join('');
   } catch(e) { toast('Erro ao carregar: ' + e.message, 'error'); }
 }
@@ -1609,49 +1689,52 @@ async function salvarLanc() {
   const totalFmt = 'R$ ' + (qtd*vunit).toLocaleString('pt-BR',{minimumFractionDigits:2});
   const vUnitFmt = 'R$ ' + vunit.toLocaleString('pt-BR',{minimumFractionDigits:2});
   if (id) {
-    const tr = tb.querySelector(`tr[data-id="${id}"]`);
+    const tr = tb.querySelector('tr[data-id="' + id + '"]');
     if (tr) {
-      tr.cells[0].innerHTML = `<strong>${pedido}</strong>`;
+      tr.cells[0].innerHTML = '<strong>' + pedido + '</strong>';
       tr.cells[1].textContent = clienteNome;
       tr.cells[2].textContent = funcionarioNome;
       tr.cells[3].textContent = tipo;
       tr.cells[4].textContent = qtd;
       tr.cells[5].textContent = dados.unidade || '-';
       tr.cells[6].textContent = vUnitFmt;
-      tr.cells[7].innerHTML = `<strong style="color:var(--amarelo)">${totalFmt}</strong>`;
-      tr.cells[8].innerHTML = badgeSit(sit);
-      tr.cells[9].textContent = dados.data_inicio || '-';
+      tr.cells[7].innerHTML = '<strong style="color:var(--amarelo)">' + totalFmt + '</strong>';
+      // cell[8] = adiantamento (não altera)
+      tr.cells[9].innerHTML = badgeSit(sit);
+      tr.cells[10].textContent = dados.data_inicio || '-';
     }
     sbUpdate('lancamentos', id, dados)
-      .then(() => { toast('Lançamento atualizado!'); invalidarCacheLanc(); })
-      .catch(e => toast('Erro: ' + e.message, 'error'));
+      .then(function() { toast('Lançamento atualizado!'); invalidarCacheLanc(); })
+      .catch(function(e) { toast('Erro: ' + e.message, 'error'); });
   } else {
     if (tb.querySelector('.empty-state')) tb.innerHTML = '';
     const tmpId = 'tmp_' + Date.now();
     const tr = document.createElement('tr');
     tr.dataset.id = tmpId;
-    tr.innerHTML = `
-      <td><strong>${pedido}</strong></td>
-      <td>${clienteNome}</td><td>${funcionarioNome}</td><td>${tipo}</td>
-      <td>${qtd}</td><td>${dados.unidade||'-'}</td><td>${vUnitFmt}</td>
-      <td><strong style="color:var(--amarelo)">${totalFmt}</strong></td>
-      <td>${badgeSit(sit)}</td>
-      <td>${dados.data_inicio||'-'}</td>
-      <td>
-        <button class="btn btn-ghost btn-sm" onclick="editarLanc('${tmpId}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="excluirLanc('${tmpId}','tb-lancamentos',11)">🗑️</button>
-      </td>`;
+    tr.innerHTML = '<td><strong>' + pedido + '</strong></td>'
+      + '<td>' + clienteNome + '</td><td>' + funcionarioNome + '</td><td>' + tipo + '</td>'
+      + '<td>' + qtd + '</td><td>' + (dados.unidade||'-') + '</td><td>' + vUnitFmt + '</td>'
+      + '<td><strong style="color:var(--amarelo)">' + totalFmt + '</strong></td>'
+      + '<td><span style="color:#444;font-size:11px">—</span></td>'
+      + '<td>' + badgeSit(sit) + '</td>'
+      + '<td>' + (dados.data_inicio||'-') + '</td>'
+      + '<td style="white-space:nowrap">'
+      + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + tmpId + '\')">✏️</button>'
+      + '<button class="btn btn-info btn-sm" onclick="abrirAdiantamento(\'' + tmpId + '\')" title="Registrar adiantamento">💵</button>'
+      + '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + tmpId + '\',\'tb-lancamentos\',12)">🗑️</button>'
+      + '</td>';
     tb.insertBefore(tr, tb.firstChild);
     invalidarCacheLanc();
-    sbInsert('lancamentos', { ...dados, criado_em: new Date().toISOString() })
-      .then(row => {
+    sbInsert('lancamentos', Object.assign({}, dados, { criado_em: new Date().toISOString() }))
+      .then(function(row) {
         tr.dataset.id = row.id;
-        tr.querySelectorAll('button')[0].setAttribute('onclick', `editarLanc('${row.id}')`);
-        tr.querySelectorAll('button')[1].setAttribute('onclick', `excluirLanc('${row.id}','tb-lancamentos',11)`);
+        tr.querySelectorAll('button')[0].setAttribute('onclick', 'editarLanc(\'' + row.id + '\')');
+        tr.querySelectorAll('button')[1].setAttribute('onclick', 'abrirAdiantamento(\'' + row.id + '\')');
+        tr.querySelectorAll('button')[2].setAttribute('onclick', 'excluirLanc(\'' + row.id + '\',\'tb-lancamentos\',12)');
         toast(irParaPagar ? 'Lançamento concluído! Redirecionando para A Pagar...' : 'Lançamento salvo!');
-        if (irParaPagar) setTimeout(() => irPara('pagamentos'), 1500);
+        if (irParaPagar) setTimeout(function(){ irPara('pagamentos'); }, 1500);
       })
-      .catch(e => { toast('Erro: ' + e.message, 'error'); tr.remove(); });
+      .catch(function(e) { toast('Erro: ' + e.message, 'error'); tr.remove(); });
   }
 }
 
@@ -2463,7 +2546,141 @@ function renderReciboParcela(l, todasParcelas, parcelaSelecionada) {
   `;
 }
 
-// ── REVERTER PARCELA ──
+// =============================================
+// ADIANTAMENTOS
+// =============================================
+// SQL necessário no Supabase:
+// CREATE TABLE IF NOT EXISTS adiantamentos (
+//   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+//   lancamento_id uuid REFERENCES lancamentos(id) ON DELETE CASCADE,
+//   valor numeric NOT NULL,
+//   data date,
+//   forma text,
+//   obs text,
+//   criado_em timestamptz DEFAULT now()
+// );
+// ALTER TABLE adiantamentos DISABLE ROW LEVEL SECURITY;
+// GRANT ALL ON adiantamentos TO anon;
+
+async function abrirAdiantamento(lancId) {
+  // Buscar lançamento
+  const todos = _cacheLancamentos || await getLancamentos();
+  const l = todos.find(function(x){ return x.id === lancId; });
+  if (!l) { toast('Registro não encontrado.', 'error'); return; }
+
+  // Buscar adiantamentos existentes
+  var adiants = [];
+  try { adiants = await sbGet('adiantamentos', 'lancamento_id=eq.' + lancId + '&order=data.asc'); } catch(e) {}
+
+  const totalAdiant = adiants.reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+  const total = parseFloat(l.valor_total||0);
+
+  document.getElementById('madi-lanc-id').value = lancId;
+  document.getElementById('madi-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('madi-valor').value = '';
+  document.getElementById('madi-obs').value = '';
+  document.getElementById('madi-total-label').textContent = 'R$ ' + totalAdiant.toLocaleString('pt-BR',{minimumFractionDigits:2});
+
+  var historicoHtml = '';
+  if (adiants.length > 0) {
+    historicoHtml = '<div style="margin-top:10px;border-top:1px solid #333;padding-top:10px">'
+      + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:6px">Adiantamentos anteriores</div>'
+      + adiants.map(function(a, i){
+          var dt = a.data ? new Date(a.data+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+          return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#AAA;margin-bottom:3px">'
+            + '<span>Adiant. ' + (i+1) + ' — ' + dt + (a.forma?' ('+a.forma+')':'') + '</span>'
+            + '<span style="color:#5dade2">R$ ' + parseFloat(a.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+
+  document.getElementById('madi-resumo').innerHTML = '<b>Pedido:</b> ' + (l.numero_pedido||'-') + '<br>'
+    + '<b>Cliente:</b> ' + (l.cliente_nome||'-') + '<br>'
+    + '<b>Funcionário:</b> ' + (l.funcionario_nome||'-') + '<br>'
+    + '<b>Valor Total da Obra:</b> <span style="color:var(--amarelo);font-size:15px;font-weight:700">R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
+    + '<br><b>Total Adiantado:</b> <span style="color:#5dade2">R$ ' + totalAdiant.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
+    + historicoHtml;
+
+  abrirModal('modal-adiantamento');
+}
+
+async function confirmarAdiantamento() {
+  const lancId = document.getElementById('madi-lanc-id').value;
+  const valor = parseFloat(document.getElementById('madi-valor').value)||0;
+  if (!lancId || valor <= 0) { toast('Informe um valor válido.', 'error'); return; }
+
+  const data = document.getElementById('madi-data').value || null;
+  const forma = document.getElementById('madi-forma').value;
+  const obs = document.getElementById('madi-obs').value.trim();
+
+  try {
+    await sbInsert('adiantamentos', {
+      lancamento_id: lancId,
+      valor: valor,
+      data: data,
+      forma: forma,
+      obs: obs || null,
+      criado_em: new Date().toISOString()
+    });
+    fecharModal('modal-adiantamento');
+    toast('Adiantamento registrado! 💵');
+    carregarLancamentos();
+  } catch(e) {
+    toast('Erro ao salvar adiantamento: ' + e.message, 'error');
+  }
+}
+
+async function abrirExcluirAdiant(lancId) {
+  const todos = _cacheLancamentos || await getLancamentos();
+  const l = todos.find(function(x){ return x.id === lancId; });
+  if (!l) { toast('Registro não encontrado.', 'error'); return; }
+
+  var adiants = [];
+  try { adiants = await sbGet('adiantamentos', 'lancamento_id=eq.' + lancId + '&order=data.asc'); } catch(e) {}
+  if (!adiants.length) { toast('Nenhum adiantamento para excluir.', 'error'); return; }
+
+  window._excluirAdiantLancId = lancId;
+
+  const total = parseFloat(l.valor_total||0);
+  var acum = 0;
+  var linhas = adiants.map(function(a, i){
+    acum += parseFloat(a.valor||0);
+    var dt = a.data ? new Date(a.data+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+    return '<div style="background:#222;border:1px solid #3d3d3d;border-radius:8px;padding:12px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
+      + '<div>'
+      + '<div style="font-size:13px;font-weight:600;color:#EEE">Adiantamento ' + (i+1) + '</div>'
+      + '<div style="font-size:12px;color:#888;margin-top:2px">' + dt + (a.forma?' · '+a.forma:'') + '</div>'
+      + (a.obs ? '<div style="font-size:11px;color:#666;margin-top:2px">'+a.obs+'</div>' : '')
+      + '</div>'
+      + '<div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px">'
+      + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:700;color:#5dade2">R$ ' + parseFloat(a.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>'
+      + '<button onclick="confirmarExcluirAdiant(\'' + a.id + '\')" style="background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.4);color:#e74c3c;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;white-space:nowrap">🗑️ Excluir</button>'
+      + '</div>'
+      + '</div>';
+  });
+
+  document.getElementById('excluir-adiant-resumo').innerHTML = '<b>Pedido:</b> ' + (l.numero_pedido||'-') + ' · <b>Cliente:</b> ' + (l.cliente_nome||'-') + ' · <b>Total Obra:</b> <span style="color:var(--amarelo)">R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>';
+  document.getElementById('excluir-adiant-lista').innerHTML = linhas.join('');
+  abrirModal('modal-excluir-adiant');
+}
+
+async function confirmarExcluirAdiant(adiantId) {
+  if (!confirm('Confirmar exclusão deste adiantamento?')) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/adiantamentos?id=eq.' + adiantId, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    });
+    fecharModal('modal-excluir-adiant');
+    toast('Adiantamento excluído! 🗑️');
+    carregarLancamentos();
+  } catch(e) {
+    toast('Erro ao excluir: ' + e.message, 'error');
+  }
+}
+
+
 async function abrirReverterParcial(id) {
   const todos = _cacheLancamentos || await getLancamentos();
   const l = todos.find(x => x.id === id);
