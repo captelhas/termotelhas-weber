@@ -1598,7 +1598,7 @@ async function carregarLancamentos() {
       // Botao Concluir (nao-tecnico, nao-concluido)
       var btnConcluir = '';
       if (!isConcluido && !isTecnico) {
-        btnConcluir = '<button class="btn btn-sm" onclick="concluirLanc(\'' + l.id + '\')" title="Concluir obra" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#58d68d;padding:5px 8px">&#9989;</button>';
+        btnConcluir = '<button class="btn btn-sm" onclick="concluirLanc(\'' + l.id + '\')" title="Marcar como Conclu\u00eddo" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#58d68d;padding:5px 8px;white-space:nowrap">&#9989; Concluir</button>';
       }
 
       return '<tr data-id="' + l.id + '" data-sit="' + sit + '">'
@@ -1615,11 +1615,15 @@ async function carregarLancamentos() {
         + '<td>' + leadCell + '</td>'
         + '<td style="white-space:nowrap">' + cronoCell + '</td>'
         + '<td>' + (l.data_inicio||'-') + '</td>'
-        + '<td style="white-space:nowrap">'
-        + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + l.id + '\')">&#9999;&#65039;</button>'
+        + '<td>'
+        + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">'
+        + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + l.id + '\')" title="Editar lançamento" style="padding:5px 8px">✏️</button>'
         + btnConcluir
-        + (!isTecnico ? '<button class="btn btn-info btn-sm" onclick="abrirAdiantamento(\'' + l.id + '\')" title="Adiantamento">&#128181;</button>' : '')
-        + (!isTecnico ? '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-lancamentos\',14)">&#128465;&#65039;</button>' : '')
+        + (!isTecnico ? '<span style="width:1px;background:#3d3d3d;height:20px;display:inline-block;margin:0 2px"></span>' : '')
+        + (!isTecnico ? '<button class="btn btn-sm" onclick="abrirAdiantamento(\'' + l.id + '\')" title="Registrar adiantamento" style="background:rgba(41,128,185,0.15);border:1px solid rgba(41,128,185,0.4);color:#5dade2;padding:5px 8px;white-space:nowrap">💵 Adianto</button>' : '')
+        + (!isTecnico ? '<span style="width:1px;background:#3d3d3d;height:20px;display:inline-block;margin:0 2px"></span>' : '')
+        + (!isTecnico ? '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-lancamentos\',14)" title="Excluir lançamento" style="padding:5px 8px">🗑️</button>' : '')
+        + '</div>'
         + '</td>'
         + '</tr>';
     }).join('');
@@ -1768,26 +1772,35 @@ async function salvarLanc() {
       + '<td>' + leadHoje + '</td>'
       + '<td><span class="crono-display" id="crono-' + tmpId + '">00:00</span> <button class="btn-crono" id="crono-btn-' + tmpId + '" onclick="toggleCrono(\'' + tmpId + '\')" title="Iniciar">&#9654;</button></td>'
       + '<td>' + (dados.data_inicio||'-') + '</td>'
-      + '<td style="white-space:nowrap">'
-      + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + tmpId + '\')">&#9999;&#65039;</button>'
-      + '<button class="btn btn-sm" onclick="concluirLanc(\'' + tmpId + '\')" title="Concluir" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#58d68d;padding:5px 8px">&#9989;</button>'
-      + '<button class="btn btn-info btn-sm" onclick="abrirAdiantamento(\'' + tmpId + '\')" title="Adiantamento">&#128181;</button>'
-      + '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + tmpId + '\',\'tb-lancamentos\',14)">&#128465;&#65039;</button>'
+      + '<td>'
+      + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">'
+      + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + tmpId + '\')" title="Editar" style="padding:5px 8px">✏️</button>'
+      + '<button class="btn btn-sm" onclick="concluirLanc(\'' + tmpId + '\')" title="Concluir obra" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#58d68d;padding:5px 8px;white-space:nowrap">✅ Concluir</button>'
+      + '<span style="width:1px;background:#3d3d3d;height:20px;display:inline-block;margin:0 2px"></span>'
+      + '<button class="btn btn-sm" onclick="abrirAdiantamento(\'' + tmpId + '\')" title="Registrar adiantamento" style="background:rgba(41,128,185,0.15);border:1px solid rgba(41,128,185,0.4);color:#5dade2;padding:5px 8px;white-space:nowrap">💵 Adianto</button>'
+      + '<span style="width:1px;background:#3d3d3d;height:20px;display:inline-block;margin:0 2px"></span>'
+      + '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + tmpId + '\',\'tb-lancamentos\',14)" title="Excluir lançamento" style="padding:5px 8px">🗑️</button>'
+      + '</div>'
       + '</td>';
     tb.insertBefore(tr, tb.firstChild);
     invalidarCacheLanc();
     sbInsert('lancamentos', Object.assign({}, dados, { criado_em: new Date().toISOString() }))
       .then(function(row) {
         tr.dataset.id = row.id;
-        var btns = tr.querySelectorAll('button');
-        btns[0].setAttribute('onclick', 'editarLanc(\'' + row.id + '\')');
-        btns[1].setAttribute('onclick', 'concluirLanc(\'' + row.id + '\')');
-        btns[2].setAttribute('onclick', 'abrirAdiantamento(\'' + row.id + '\')');
-        btns[3].setAttribute('onclick', 'excluirLanc(\'' + row.id + '\',\'tb-lancamentos\',14)');
+        // Cronômetro
         var cronoEl = document.getElementById('crono-' + tmpId);
         var cronoBtnEl = document.getElementById('crono-btn-' + tmpId);
         if (cronoEl) { cronoEl.id = 'crono-' + row.id; }
         if (cronoBtnEl) { cronoBtnEl.id = 'crono-btn-' + row.id; cronoBtnEl.setAttribute('onclick', 'toggleCrono(\'' + row.id + '\')'); }
+        // Botões de ação (buscar por title para não depender de índice)
+        var btnEditar = tr.querySelector('button[title="Editar"]');
+        var btnConcluirEl = tr.querySelector('button[title="Concluir obra"]');
+        var btnAdianto = tr.querySelector('button[title="Registrar adiantamento"]');
+        var btnExcluir = tr.querySelector('button[title="Excluir lançamento"]');
+        if (btnEditar) btnEditar.setAttribute('onclick', 'editarLanc(\'' + row.id + '\')');
+        if (btnConcluirEl) btnConcluirEl.setAttribute('onclick', 'concluirLanc(\'' + row.id + '\')');
+        if (btnAdianto) btnAdianto.setAttribute('onclick', 'abrirAdiantamento(\'' + row.id + '\')');
+        if (btnExcluir) btnExcluir.setAttribute('onclick', 'excluirLanc(\'' + row.id + '\',\'tb-lancamentos\',14)');
         toast(irParaPagar ? 'Conclu\u00eddo! Redirecionando para A Pagar...' : 'Lançamento salvo!');
         if (irParaPagar) setTimeout(function(){ irPara('pagamentos'); }, 1500);
       })
