@@ -238,6 +238,18 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 input[type=number]::-webkit-inner-spin-button { opacity:.5; }
 
+/* Cronômetro */
+.crono-display { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; color:#f8c471; letter-spacing:1px; display:inline-block; min-width:58px; }
+.crono-display.rodando { color:#58d68d; }
+.btn-crono { background:none; border:1px solid #444; border-radius:5px; cursor:pointer; padding:3px 7px; font-size:14px; transition:all .15s; line-height:1; }
+.btn-crono:hover { background:#333; }
+
+/* Lead time */
+.leadtime { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; white-space:nowrap; }
+.leadtime.ok   { background:rgba(39,174,96,0.15);  color:#58d68d; }
+.leadtime.warn { background:rgba(243,156,18,0.15); color:#f8c471; }
+.leadtime.late { background:rgba(231,76,60,0.15);  color:#f1948a; }
+
 /* ===== RECIBO ===== */
 .recibo-doc {
   background:#fff; color:#111; border-radius:10px; padding:50px;
@@ -516,7 +528,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Funcionário</th><th>Tipo Serviço</th><th>Qtd</th><th>Un</th><th>Valor Unit.</th><th>Total</th><th>Adiantamento</th><th>Situação</th><th>Início</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Funcionário</th><th>Tipo Serviço</th><th>Qtd</th><th>Un</th><th>Valor Unit.</th><th>Total</th><th>Adiantamento</th><th>Situação</th><th>Lead Time</th><th>Crono</th><th>Início</th><th>Ações</th></tr></thead>
             <tbody id="tb-lancamentos"></tbody>
           </table>
         </div>
@@ -1519,53 +1531,77 @@ function badgeSit(sit) {
 }
 
 async function carregarLancamentos() {
-  const filtro = document.getElementById('filtro-lanc-sit').value;
-  const tb = document.getElementById('tb-lancamentos');
+  var filtro = document.getElementById('filtro-lanc-sit').value;
+  var tb = document.getElementById('tb-lancamentos');
+  pararTodosCronos();
   try {
-    let params = 'order=criado_em.desc';
+    var params = 'order=criado_em.desc';
     if (filtro) params += '&situacao=eq.' + encodeURIComponent(filtro);
-    let docs = await sbGet('lancamentos', params);
+    var docs = await sbGet('lancamentos', params);
 
-    // Técnicos só veem seus próprios lançamentos
-    const isTecnico = usuarioLogado && usuarioLogado.colaborador;
+    var isTecnico = usuarioLogado && usuarioLogado.colaborador;
     if (isTecnico) {
-      docs = docs.filter(l => (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim());
+      docs = docs.filter(function(l){ return (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim(); });
     }
 
-    if (!docs.length) { tb.innerHTML = '<tr><td colspan="12" class="empty-state"><div class="icon">📋</div><p>Nenhum lançamento.</p></td></tr>'; return; }
+    if (!docs.length) { tb.innerHTML = '<tr><td colspan="14" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>'; return; }
 
-    // Buscar todos os adiantamentos de uma vez
-    let todosAdiant = [];
+    var todosAdiant = [];
     try { todosAdiant = await sbGet('adiantamentos', 'order=data.asc'); } catch(e) {}
-
-    // Agrupar adiantamentos por lancamento_id
-    const adiantMap = {};
-    todosAdiant.forEach(a => {
+    var adiantMap = {};
+    todosAdiant.forEach(function(a){
       if (!adiantMap[a.lancamento_id]) adiantMap[a.lancamento_id] = [];
       adiantMap[a.lancamento_id].push(a);
     });
 
-    tb.innerHTML = docs.map(l => {
-      const totalFmt = 'R$ ' + parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
-      const vUnitFmt = 'R$ ' + parseFloat(l.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
-      const total = parseFloat(l.valor_total||0);
+    var hoje = new Date(); hoje.setHours(0,0,0,0);
 
-      // Adiantamento desta linha
-      const adiants = adiantMap[l.id] || [];
-      const totalAdiant = adiants.reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
-      const resta = total - totalAdiant;
+    tb.innerHTML = docs.map(function(l) {
+      var totalFmt = 'R$ ' + parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+      var vUnitFmt = 'R$ ' + parseFloat(l.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+      var total = parseFloat(l.valor_total||0);
+      var sit = l.situacao || 'Em andamento';
+      var isConcluido = (sit === 'Conclu' + 'ído');
 
-      let adiantCell = '';
+      // Adiantamento
+      var adiants = adiantMap[l.id] || [];
+      var totalAdiant = adiants.reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+      var resta = total - totalAdiant;
+      var adiantCell = '';
       if (totalAdiant > 0) {
-        const corResta = resta <= 0 ? '#58d68d' : '#f5a623';
-        adiantCell = '<div style="font-size:11px;color:#5dade2;font-weight:600">💵 R$ ' + totalAdiant.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>'
+        var corResta = resta <= 0 ? '#58d68d' : '#f5a623';
+        adiantCell = '<div style="font-size:11px;color:#5dade2;font-weight:600">&#128181; R$ ' + totalAdiant.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>'
           + '<div style="font-size:10px;color:#888">Resta: <span style="color:' + corResta + ';font-weight:600">R$ ' + Math.max(0,resta).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span></div>'
-          + (!isTecnico ? '<button onclick="abrirExcluirAdiant(\'' + l.id + '\')" style="margin-top:3px;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:10px">🗑️ excluir</button>' : '') ;
+          + (!isTecnico ? '<button onclick="abrirExcluirAdiant(\'' + l.id + '\')" style="margin-top:3px;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:10px">&#128465;&#65039; excluir</button>' : '');
       } else {
-        adiantCell = '<span style="color:#444;font-size:11px">—</span>';
+        adiantCell = '<span style="color:#444;font-size:11px">&mdash;</span>';
       }
 
-      return '<tr data-id="' + l.id + '">'
+      // Lead time
+      var refDate = l.data_inicio || (l.criado_em ? l.criado_em.split('T')[0] : null);
+      var leadCell = '<span style="color:#444;font-size:11px">&mdash;</span>';
+      if (refDate) {
+        var dtRef = new Date(refDate + 'T12:00:00');
+        var dias = Math.max(0, Math.round((hoje - dtRef) / 86400000));
+        var ltClass = isConcluido ? 'ok' : (dias <= 7 ? 'ok' : dias <= 14 ? 'warn' : 'late');
+        var ltLabel = dias === 0 ? 'Hoje' : (dias === 1 ? '1 dia' : dias + ' dias');
+        leadCell = '<span class="leadtime ' + ltClass + '">' + ltLabel + '</span>';
+      }
+
+      // Cronometro (apenas nao-concluido)
+      var cronoCell = '<span style="color:#333;font-size:11px">&mdash;</span>';
+      if (!isConcluido) {
+        cronoCell = '<span class="crono-display" id="crono-' + l.id + '">00:00</span> '
+          + '<button class="btn-crono" id="crono-btn-' + l.id + '" onclick="toggleCrono(\'' + l.id + '\')" title="Iniciar/Pausar">&#9654;</button>';
+      }
+
+      // Botao Concluir (nao-tecnico, nao-concluido)
+      var btnConcluir = '';
+      if (!isConcluido && !isTecnico) {
+        btnConcluir = '<button class="btn btn-sm" onclick="concluirLanc(\'' + l.id + '\')" title="Concluir obra" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#58d68d;padding:5px 8px">&#9989;</button>';
+      }
+
+      return '<tr data-id="' + l.id + '" data-sit="' + sit + '">'
         + '<td><strong>' + (l.numero_pedido||'-') + '</strong></td>'
         + '<td>' + (l.cliente_nome||'-') + '</td>'
         + '<td>' + (l.funcionario_nome||'-') + '</td>'
@@ -1575,17 +1611,21 @@ async function carregarLancamentos() {
         + '<td>' + vUnitFmt + '</td>'
         + '<td><strong style="color:var(--amarelo)">' + totalFmt + '</strong></td>'
         + '<td>' + adiantCell + '</td>'
-        + '<td>' + badgeSit(l.situacao) + '</td>'
+        + '<td>' + badgeSit(sit) + '</td>'
+        + '<td>' + leadCell + '</td>'
+        + '<td style="white-space:nowrap">' + cronoCell + '</td>'
         + '<td>' + (l.data_inicio||'-') + '</td>'
         + '<td style="white-space:nowrap">'
-        + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + l.id + '\')">✏️</button>'
-        + (!isTecnico ? '<button class="btn btn-info btn-sm" onclick="abrirAdiantamento(\'' + l.id + '\')" title="Registrar adiantamento">💵</button>' : '')
-        + (!isTecnico ? '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-lancamentos\',12)">🗑️</button>' : '')
+        + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + l.id + '\')">&#9999;&#65039;</button>'
+        + btnConcluir
+        + (!isTecnico ? '<button class="btn btn-info btn-sm" onclick="abrirAdiantamento(\'' + l.id + '\')" title="Adiantamento">&#128181;</button>' : '')
+        + (!isTecnico ? '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-lancamentos\',14)">&#128465;&#65039;</button>' : '')
         + '</td>'
         + '</tr>';
     }).join('');
   } catch(e) { toast('Erro ao carregar: ' + e.message, 'error'); }
 }
+
 
 async function abrirModalLanc() {
   ['ml-id','ml-pedido','ml-tipo','ml-obs'].forEach(f => document.getElementById(f).value='');
@@ -1699,39 +1739,56 @@ async function salvarLanc() {
       tr.cells[5].textContent = dados.unidade || '-';
       tr.cells[6].textContent = vUnitFmt;
       tr.cells[7].innerHTML = '<strong style="color:var(--amarelo)">' + totalFmt + '</strong>';
-      // cell[8] = adiantamento (não altera)
+      // cell[8]=adiantamento, cell[9]=situacao, cell[10]=leadtime, cell[11]=crono, cell[12]=inicio
       tr.cells[9].innerHTML = badgeSit(sit);
-      tr.cells[10].textContent = dados.data_inicio || '-';
+      tr.cells[12].textContent = dados.data_inicio || '-';
     }
     sbUpdate('lancamentos', id, dados)
-      .then(function() { toast('Lançamento atualizado!'); invalidarCacheLanc(); })
+      .then(function() {
+        toast('Lançamento atualizado!');
+        invalidarCacheLanc();
+        // Se situacao mudou para Concluido, recarregar para remover da lista
+        if (sit === 'Conclu\u00eddo') {
+          setTimeout(function(){ carregarLancamentos(); setTimeout(function(){ irPara('pagamentos'); }, 800); }, 400);
+        }
+      })
       .catch(function(e) { toast('Erro: ' + e.message, 'error'); });
   } else {
     if (tb.querySelector('.empty-state')) tb.innerHTML = '';
     const tmpId = 'tmp_' + Date.now();
     const tr = document.createElement('tr');
     tr.dataset.id = tmpId;
+    var leadHoje = '<span class="leadtime ok">Hoje</span>';
     tr.innerHTML = '<td><strong>' + pedido + '</strong></td>'
       + '<td>' + clienteNome + '</td><td>' + funcionarioNome + '</td><td>' + tipo + '</td>'
       + '<td>' + qtd + '</td><td>' + (dados.unidade||'-') + '</td><td>' + vUnitFmt + '</td>'
       + '<td><strong style="color:var(--amarelo)">' + totalFmt + '</strong></td>'
-      + '<td><span style="color:#444;font-size:11px">—</span></td>'
+      + '<td><span style="color:#444;font-size:11px">\u2014</span></td>'
       + '<td>' + badgeSit(sit) + '</td>'
+      + '<td>' + leadHoje + '</td>'
+      + '<td><span class="crono-display" id="crono-' + tmpId + '">00:00</span> <button class="btn-crono" id="crono-btn-' + tmpId + '" onclick="toggleCrono(\'' + tmpId + '\')" title="Iniciar">&#9654;</button></td>'
       + '<td>' + (dados.data_inicio||'-') + '</td>'
       + '<td style="white-space:nowrap">'
-      + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + tmpId + '\')">✏️</button>'
-      + '<button class="btn btn-info btn-sm" onclick="abrirAdiantamento(\'' + tmpId + '\')" title="Registrar adiantamento">💵</button>'
-      + '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + tmpId + '\',\'tb-lancamentos\',12)">🗑️</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + tmpId + '\')">&#9999;&#65039;</button>'
+      + '<button class="btn btn-sm" onclick="concluirLanc(\'' + tmpId + '\')" title="Concluir" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#58d68d;padding:5px 8px">&#9989;</button>'
+      + '<button class="btn btn-info btn-sm" onclick="abrirAdiantamento(\'' + tmpId + '\')" title="Adiantamento">&#128181;</button>'
+      + '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + tmpId + '\',\'tb-lancamentos\',14)">&#128465;&#65039;</button>'
       + '</td>';
     tb.insertBefore(tr, tb.firstChild);
     invalidarCacheLanc();
     sbInsert('lancamentos', Object.assign({}, dados, { criado_em: new Date().toISOString() }))
       .then(function(row) {
         tr.dataset.id = row.id;
-        tr.querySelectorAll('button')[0].setAttribute('onclick', 'editarLanc(\'' + row.id + '\')');
-        tr.querySelectorAll('button')[1].setAttribute('onclick', 'abrirAdiantamento(\'' + row.id + '\')');
-        tr.querySelectorAll('button')[2].setAttribute('onclick', 'excluirLanc(\'' + row.id + '\',\'tb-lancamentos\',12)');
-        toast(irParaPagar ? 'Lançamento concluído! Redirecionando para A Pagar...' : 'Lançamento salvo!');
+        var btns = tr.querySelectorAll('button');
+        btns[0].setAttribute('onclick', 'editarLanc(\'' + row.id + '\')');
+        btns[1].setAttribute('onclick', 'concluirLanc(\'' + row.id + '\')');
+        btns[2].setAttribute('onclick', 'abrirAdiantamento(\'' + row.id + '\')');
+        btns[3].setAttribute('onclick', 'excluirLanc(\'' + row.id + '\',\'tb-lancamentos\',14)');
+        var cronoEl = document.getElementById('crono-' + tmpId);
+        var cronoBtnEl = document.getElementById('crono-btn-' + tmpId);
+        if (cronoEl) { cronoEl.id = 'crono-' + row.id; }
+        if (cronoBtnEl) { cronoBtnEl.id = 'crono-btn-' + row.id; cronoBtnEl.setAttribute('onclick', 'toggleCrono(\'' + row.id + '\')'); }
+        toast(irParaPagar ? 'Conclu\u00eddo! Redirecionando para A Pagar...' : 'Lançamento salvo!');
         if (irParaPagar) setTimeout(function(){ irPara('pagamentos'); }, 1500);
       })
       .catch(function(e) { toast('Erro: ' + e.message, 'error'); tr.remove(); });
@@ -1900,19 +1957,30 @@ async function confirmarPagamento() {
   };
 
   if (isPagoTotal) {
-    const trPag = document.querySelector(`#tb-pagamentos tr[data-id="${id}"]`);
-    if (trPag) trPag.remove();
+    const trPag = document.querySelector('#tb-pagamentos tr[data-id="' + id + '"]');
+    if (trPag) {
+      trPag.style.transition = 'opacity 0.4s';
+      trPag.style.opacity = '0';
+      setTimeout(function(){ if(trPag.parentNode) trPag.parentNode.removeChild(trPag); }, 400);
+    }
     const tbPag = document.getElementById('tb-pagamentos');
-    if (tbPag && tbPag.querySelectorAll('tr[data-id]').length === 0) {
-      tbPag.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">💰</div><p>Nenhum lançamento a pagar.</p></td></tr>';
+    if (tbPag && tbPag.querySelectorAll('tr[data-id]').length <= 1) {
+      setTimeout(function(){
+        if (tbPag.querySelectorAll('tr[data-id]').length === 0)
+          tbPag.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">&#128176;</div><p>Nenhum lan&ccedil;amento a pagar.</p></td></tr>';
+      }, 500);
     }
     sbUpdate('lancamentos', id, payload)
-      .then(() => irPara('finalizados'))
-      .catch(e => toast('Erro ao atualizar: ' + e.message, 'error'));
+      .then(function() {
+        invalidarCacheLanc();
+        toast('Pagamento total registrado! Redirecionando... &#9989;');
+        setTimeout(function(){ irPara('finalizados'); }, 1000);
+      })
+      .catch(function(e) { toast('Erro ao atualizar: ' + e.message, 'error'); });
   } else {
     sbUpdate('lancamentos', id, payload)
-      .then(() => carregarPagamentos())
-      .catch(e => toast('Erro ao atualizar: ' + e.message, 'error'));
+      .then(function() { invalidarCacheLanc(); carregarPagamentos(); })
+      .catch(function(e) { toast('Erro ao atualizar: ' + e.message, 'error'); });
   }
 }
 
@@ -2544,6 +2612,91 @@ function renderReciboParcela(l, todasParcelas, parcelaSelecionada) {
       Termotelhas Weber · Parcela ${numParcela}/${todasParcelas.length} · Emitido em ${hoje} · Sistema de Gestão
     </div>
   `;
+}
+
+// =============================================
+// CRONÔMETRO POR OBRA
+// =============================================
+var _cronoState = {}; // { [lancId]: { segundos, intervalo, rodando } }
+
+function pararTodosCronos() {
+  Object.keys(_cronoState).forEach(function(id) {
+    if (_cronoState[id] && _cronoState[id].intervalo) {
+      clearInterval(_cronoState[id].intervalo);
+    }
+  });
+  _cronoState = {};
+}
+
+function toggleCrono(lancId) {
+  if (!_cronoState[lancId]) _cronoState[lancId] = { segundos: 0, intervalo: null, rodando: false };
+  var st = _cronoState[lancId];
+  var display = document.getElementById('crono-' + lancId);
+  var btn = document.getElementById('crono-btn-' + lancId);
+
+  if (st.rodando) {
+    clearInterval(st.intervalo);
+    st.intervalo = null;
+    st.rodando = false;
+    if (display) display.classList.remove('rodando');
+    if (btn) btn.textContent = '\u25b6';
+  } else {
+    st.rodando = true;
+    if (display) display.classList.add('rodando');
+    if (btn) btn.textContent = '\u23f8';
+    st.intervalo = setInterval(function() {
+      st.segundos++;
+      var m = Math.floor(st.segundos / 60);
+      var s = st.segundos % 60;
+      var txt = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      var el = document.getElementById('crono-' + lancId);
+      if (el) el.textContent = txt;
+      else {
+        clearInterval(st.intervalo);
+        st.rodando = false;
+      }
+    }, 1000);
+  }
+}
+
+// =============================================
+// CONCLUIR LANÇAMENTO (botão rápido na linha)
+// =============================================
+async function concluirLanc(lancId) {
+  if (!confirm('Marcar este lançamento como Conclu\u00eddo e mover para A Pagar?')) return;
+
+  // Parar cronometro se estiver rodando
+  if (_cronoState[lancId] && _cronoState[lancId].intervalo) {
+    clearInterval(_cronoState[lancId].intervalo);
+    delete _cronoState[lancId];
+  }
+
+  var hoje = new Date().toISOString().split('T')[0];
+  try {
+    await sbUpdate('lancamentos', lancId, {
+      situacao: 'Conclu\u00eddo',
+      pagamento_status: 'concluido',
+      data_fim: hoje
+    });
+    invalidarCacheLanc();
+    toast('Obra conclu\u00edda! Movendo para A Pagar... \u2705');
+    // Remove linha da tabela imediatamente
+    var tr = document.querySelector('#tb-lancamentos tr[data-id="' + lancId + '"]');
+    if (tr) {
+      tr.style.transition = 'opacity 0.4s';
+      tr.style.opacity = '0';
+      setTimeout(function(){
+        if (tr.parentNode) tr.parentNode.removeChild(tr);
+        var tb = document.getElementById('tb-lancamentos');
+        if (tb && tb.querySelectorAll('tr[data-id]').length === 0) {
+          tb.innerHTML = '<tr><td colspan="14" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>';
+        }
+      }, 400);
+    }
+    setTimeout(function(){ irPara('pagamentos'); }, 900);
+  } catch(e) {
+    toast('Erro ao concluir: ' + e.message, 'error');
+  }
 }
 
 // =============================================
