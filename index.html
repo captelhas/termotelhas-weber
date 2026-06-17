@@ -942,7 +942,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
 <div class="modal-overlay" id="modal-recibo-parcial">
   <div class="modal" style="max-width:680px">
     <button class="modal-close" onclick="fecharModal('modal-recibo-parcial')" title="Fechar">✕</button>
-    <h3>🧾 Recibo de Pagamento Parcial</h3>
+    <h3 id="modal-recibo-titulo">🧾 Recibo de Pagamento Parcial</h3>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:18px">
       <button class="btn btn-ghost btn-sm" onclick="fecharModal('modal-recibo-parcial')">Fechar</button>
       <button class="btn btn-success" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
@@ -1572,7 +1572,10 @@ async function carregarLancamentos() {
         var corResta = resta <= 0 ? '#58d68d' : '#f5a623';
         adiantCell = '<div style="font-size:11px;color:#5dade2;font-weight:600">&#128181; R$ ' + totalAdiant.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>'
           + '<div style="font-size:10px;color:#888">Resta: <span style="color:' + corResta + ';font-weight:600">R$ ' + Math.max(0,resta).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span></div>'
-          + (!isTecnico ? '<button onclick="abrirExcluirAdiant(\'' + l.id + '\')" style="margin-top:3px;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:10px">&#128465;&#65039; excluir</button>' : '');
+          + '<div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">'
+          + '<button onclick="gerarReciboAdiantamento(\'' + l.id + '\')" title="Gerar recibo do adiantamento" style="background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.35);color:var(--amarelo);padding:2px 7px;border-radius:4px;cursor:pointer;font-size:10px">&#129534; recibo</button>'
+          + (!isTecnico ? '<button onclick="abrirExcluirAdiant(\'' + l.id + '\')" style="background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:10px">&#128465;&#65039; excluir</button>' : '')
+          + '</div>';
       } else {
         adiantCell = '<span style="color:#444;font-size:11px">&mdash;</span>';
       }
@@ -2533,6 +2536,9 @@ async function gerarReciboParcial(id) {
   window._reciboLanc = l;
   window._reciboParcelas = parcelas;
 
+  var tituloEl = document.getElementById('modal-recibo-titulo');
+  if (tituloEl) tituloEl.textContent = '🧾 Recibo de Pagamento Parcial';
+
   if (parcelas.length === 1) {
     renderReciboParcela(l, parcelas, parcelas[0]);
   } else {
@@ -2867,6 +2873,116 @@ async function confirmarExcluirAdiant(adiantId) {
   } catch(e) {
     toast('Erro ao excluir: ' + e.message, 'error');
   }
+}
+
+// =============================================
+// RECIBO DE ADIANTAMENTO (tela Lançamentos)
+// =============================================
+async function gerarReciboAdiantamento(lancId) {
+  const todos = _cacheLancamentos || await getLancamentos();
+  const l = todos.find(function(x){ return x.id === lancId; });
+  if (!l) { toast('Registro não encontrado.', 'error'); return; }
+
+  var adiants = [];
+  try { adiants = await sbGet('adiantamentos', 'lancamento_id=eq.' + lancId + '&order=data.asc'); } catch(e) {}
+  if (!adiants.length) { toast('Nenhum adiantamento registrado para esta obra.', 'error'); return; }
+
+  window._reciboLancAdi = l;
+  window._reciboAdiants = adiants;
+
+  var tituloEl = document.getElementById('modal-recibo-titulo');
+  if (tituloEl) tituloEl.textContent = '🧾 Recibo de Adiantamento';
+
+  if (adiants.length === 1) {
+    renderReciboAdiantamento(l, adiants, adiants[0]);
+  } else {
+    abrirSeletorAdiantamento(l, adiants);
+  }
+  abrirModal('modal-recibo-parcial');
+}
+
+function abrirSeletorAdiantamento(l, adiants) {
+  var total = parseFloat(l.valor_total||0);
+  var acumulado = 0;
+  var linhas = adiants.map(function(a, i){
+    var valor = parseFloat(a.valor||0);
+    acumulado += valor;
+    var saldoApos = total - acumulado;
+    var dt = a.data ? new Date(a.data+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+    return '<div onclick="selecionarAdiantamento(\'' + a.id + '\')" style="cursor:pointer;background:#222;border:1px solid #333;border-radius:8px;padding:14px 16px;margin-bottom:10px;transition:border-color .15s" onmouseover="this.style.borderColor=\'#F5A623\'" onmouseout="this.style.borderColor=\'#333\'">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center">'
+      + '<div>'
+      + '<div style="font-size:13px;font-weight:600;color:#EEE">Adiantamento ' + (i+1) + '</div>'
+      + '<div style="font-size:12px;color:#888;margin-top:2px">' + dt + (a.forma ? ' · ' + a.forma : '') + '</div>'
+      + (a.obs ? '<div style="font-size:11px;color:#666;margin-top:2px">' + a.obs + '</div>' : '')
+      + '</div>'
+      + '<div style="text-align:right">'
+      + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:700;color:#5dade2">R$ ' + valor.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>'
+      + '<div style="font-size:11px;color:#888">Saldo após: R$ ' + Math.max(0,saldoApos).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  document.getElementById('recibo-parcial-doc').innerHTML = '<div style="padding:10px 0">'
+    + '<div style="font-size:13px;color:#AAA;margin-bottom:16px">Selecione o adiantamento para gerar o recibo:</div>'
+    + '<div style="font-size:12px;color:#666;margin-bottom:14px">Pedido <strong style="color:#EEE">' + (l.numero_pedido||'-') + '</strong> · ' + (l.cliente_nome||'-') + ' · Total: <strong style="color:var(--amarelo)">R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</strong></div>'
+    + linhas
+    + '</div>';
+}
+
+function selecionarAdiantamento(adiantId) {
+  var l = window._reciboLancAdi;
+  var adiants = window._reciboAdiants;
+  var a = adiants.find(function(x){ return x.id === adiantId; });
+  if (!l || !a) return;
+  renderReciboAdiantamento(l, adiants, a);
+}
+
+function renderReciboAdiantamento(l, todosAdiants, adiantSelecionado) {
+  var total = parseFloat(l.valor_total||0);
+  var idxAtual = todosAdiants.findIndex(function(a){ return a.id === adiantSelecionado.id; });
+  var numAdi = idxAtual + 1;
+  var valorEste = parseFloat(adiantSelecionado.valor||0);
+  var pagoAteAgora = todosAdiants.slice(0, idxAtual + 1).reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+  var saldoApos = total - pagoAteAgora;
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  var dtAdi = adiantSelecionado.data ? new Date(adiantSelecionado.data+'T12:00:00').toLocaleDateString('pt-BR') : hoje;
+
+  var voltarBtn = todosAdiants.length > 1
+    ? '<button onclick="abrirSeletorAdiantamento(window._reciboLancAdi, window._reciboAdiants)" style="background:#333;border:1px solid #444;color:#AAA;padding:6px 14px;border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:16px">← Voltar para lista de adiantamentos</button>'
+    : '';
+
+  document.getElementById('recibo-parcial-doc').innerHTML = voltarBtn
+    + '<div class="recibo-header">'
+    + '<div class="rec-logo-mark"><div class="rec-bar rec-bar1"></div><div class="rec-bar rec-bar2"></div><div class="rec-bar rec-bar3"></div></div>'
+    + '<h1>TERMOTELHAS WEBER</h1>'
+    + '<p>SISTEMA DE GESTÃO · RECIBO DE ADIANTAMENTO</p>'
+    + '</div>'
+    + '<div class="recibo-titulo"><h2>Recibo — Adiantamento ' + numAdi + ' de ' + todosAdiants.length + '</h2></div>'
+    + '<div class="recibo-info">'
+    + '<div class="ri-item"><label>Nº Pedido</label><span>' + (l.numero_pedido||'-') + '</span></div>'
+    + '<div class="ri-item"><label>Data de Emissão</label><span>' + hoje + '</span></div>'
+    + '<div class="ri-item"><label>Cliente</label><span>' + (l.cliente_nome||'-') + '</span></div>'
+    + '<div class="ri-item"><label>Funcionário</label><span>' + (l.funcionario_nome||'-') + '</span></div>'
+    + '<div class="ri-item"><label>Serviço / Produto</label><span>' + (l.tipo_servico||'-') + '</span></div>'
+    + '<div class="ri-item"><label>Valor Total da Obra</label><span style="font-weight:700">R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span></div>'
+    + '</div>'
+    + '<table class="recibo-table">'
+    + '<thead><tr><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead>'
+    + '<tbody>'
+    + '<tr><td>Valor deste adiantamento (' + dtAdi + ')' + (adiantSelecionado.forma ? ' — ' + adiantSelecionado.forma : '') + '</td><td style="text-align:right;font-weight:700;color:#27AE60">R$ ' + valorEste.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</td></tr>'
+    + '<tr style="background:#f9f9f9"><td>Total adiantado até agora</td><td style="text-align:right;font-weight:600">R$ ' + pagoAteAgora.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</td></tr>'
+    + '<tr style="background:#fff8ee"><td><strong>Saldo restante</strong></td><td style="text-align:right;font-weight:700;color:#C0392B">R$ ' + Math.max(0,saldoApos).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</td></tr>'
+    + '</tbody>'
+    + '</table>'
+    + '<div class="recibo-total"><div class="rt-label">Valor Recebido — Adiantamento ' + numAdi + '/' + todosAdiants.length + '</div><div class="rt-value">R$ ' + valorEste.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div></div>'
+    + (adiantSelecionado.obs ? '<div style="margin-bottom:24px;padding:12px 16px;background:#f9f9f9;border-radius:6px;font-size:13px;color:#555"><strong>Observação:</strong> ' + adiantSelecionado.obs + '</div>' : '')
+    + '<div class="recibo-assinatura">'
+    + '<div class="ass-box"><div class="ass-linha">Termotelhas Weber<br><small>Empregador</small></div></div>'
+    + '<div class="ass-box"><div class="ass-linha">' + (l.funcionario_nome||'Funcionário') + '<br><small>Funcionário</small></div></div>'
+    + '</div>'
+    + '<div class="recibo-rodape">Termotelhas Weber · Adiantamento ' + numAdi + '/' + todosAdiants.length + ' · Emitido em ' + hoje + ' · Sistema de Gestão</div>';
 }
 
 
