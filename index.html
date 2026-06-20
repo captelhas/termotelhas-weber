@@ -385,7 +385,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
     <div class="tela active" id="t-dashboard">
       <div class="page-header">
         <h2>📊 Dashboard</h2>
-        <p>Resumo de obras por funcionário</p>
+        <p id="dash-subtitle">Resumo de obras por funcionário</p>
       </div>
       <div class="filtros">
         <div class="field"><label>Mês</label>
@@ -403,7 +403,8 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
             <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
           </select>
         </div>
-        <div class="field"><label>Funcionário</label>
+        <!-- Filtro de funcionário: visível apenas para admin/gerente -->
+        <div class="field" id="dash-filtro-func"><label>Funcionário</label>
           <select id="dash-func" onchange="carregarDashboard()">
             <option value="">Todos</option>
           </select>
@@ -421,7 +422,8 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
           <h3 style="margin:0">📅 Janeiro a Dezembro — Por Funcionário</h3>
           <div style="display:flex;gap:10px;align-items:center">
-            <div class="field" style="margin:0;min-width:200px">
+            <!-- Seletor de funcionário no gráfico: só para admin/gerente -->
+            <div class="field" id="chart-filtro-func" style="margin:0;min-width:200px">
               <select id="chart-func-sel" onchange="atualizarGraficoFunc()" style="padding:8px 12px;background:#222;border:1px solid #444;border-radius:6px;color:#EEE;font-size:13px;width:100%">
                 <option value="">Todos os funcionários</option>
               </select>
@@ -643,12 +645,9 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
 
     <!-- TELA DE PERMISSÕES -->
     <div class="tela" id="t-permissoes">
-      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <h2>🔐 Permissões de Acesso</h2>
-          <p>Gerencie usuários, senhas, vínculos e telas disponíveis por perfil</p>
-        </div>
-        <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">+ Novo Usuário</button>
+      <div class="page-header">
+        <h2>🔐 Permissões de Acesso</h2>
+        <p>Defina quais telas cada perfil pode acessar</p>
       </div>
       <div id="perm-container"></div>
     </div>
@@ -938,59 +937,6 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
   </div>
 </div>
 
-<!-- Modal Novo Usuário -->
-<div class="modal-overlay" id="modal-novo-usuario">
-  <div class="modal" style="max-width:520px">
-    <button class="modal-close" onclick="fecharModal('modal-novo-usuario')" title="Fechar">✕</button>
-    <h3 id="mnu-titulo">➕ Novo Usuário</h3>
-    <input type="hidden" id="mnu-perfil-original" />
-    <div class="form-row cols-2">
-      <div class="field">
-        <label>Nome de Exibição *</label>
-        <input id="mnu-nome" placeholder="Ex: João da Silva" />
-      </div>
-      <div class="field">
-        <label>Login (único) *</label>
-        <input id="mnu-login" placeholder="Ex: joao" style="text-transform:lowercase" oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')" />
-      </div>
-    </div>
-    <div class="form-row cols-2">
-      <div class="field">
-        <label>Senha *</label>
-        <input id="mnu-senha" placeholder="Senha de acesso" />
-      </div>
-      <div class="field">
-        <label>Colaborador vinculado</label>
-        <select id="mnu-colab" style="width:100%;padding:10px 13px;background:#222;border:1px solid #444;border-radius:6px;color:#EEE;font-size:13px">
-          <option value="">— Nenhum (acesso geral) —</option>
-        </select>
-      </div>
-    </div>
-    <div style="background:#1a1a1a;border-radius:8px;padding:12px 14px;font-size:12px;color:#666;margin-bottom:4px">
-      💡 Se vincular um colaborador, o usuário só verá os lançamentos daquele funcionário na tela de Lançamentos.
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModal('modal-novo-usuario')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarNovoUsuario()">💾 Salvar Usuário</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Permissões Individuais -->
-<div class="modal-overlay" id="modal-perm-individual">
-  <div class="modal" style="max-width:560px">
-    <button class="modal-close" onclick="fecharModal('modal-perm-individual')" title="Fechar">✕</button>
-    <h3 id="mperm-titulo">🔐 Permissões</h3>
-    <div id="mperm-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost btn-sm" onclick="marcarTodosModal(true)">✅ Todas</button>
-      <button class="btn btn-ghost btn-sm" onclick="marcarTodosModal(false)">❌ Nenhuma</button>
-      <button class="btn btn-ghost btn-sm" onclick="restaurarPadraoModal()">↩️ Padrão</button>
-      <button class="btn btn-ghost" onclick="fecharModal('modal-perm-individual')">Fechar</button>
-    </div>
-  </div>
-</div>
-
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1055,31 +1001,14 @@ async function sbDelete(table, id) {
   if (!r.ok) throw new Error(await r.text());
 }
 
-// USUÁRIOS DO SISTEMA (gerenciados dinamicamente pelo admin)
-var USUARIOS = [
+// USUÁRIOS DO SISTEMA
+const USUARIOS = [
   { user: 'admin',     senha: 'weber2025',  nome: 'Administrador', perfil: 'admin',      colaborador: null },
   { user: 'gerente',   senha: 'weber123',   nome: 'Gerente',       perfil: 'gerente',    colaborador: null },
-  { user: 'tecnico01', senha: 'W3ber_2026', nome: 'Técnico 01',    perfil: 'tecnico01',  colaborador: null },
-  { user: 'tecnico02', senha: 'W3ber_2026', nome: 'Técnico 02',    perfil: 'tecnico02',  colaborador: null },
+  { user: 'tecnico01', senha: 'W3ber_2026', nome: 'Técnico 01',    perfil: 'tecnico01',  colaborador: 'Técnico 01' },
+  { user: 'tecnico02', senha: 'W3ber_2026', nome: 'Técnico 02',    perfil: 'tecnico02',  colaborador: 'Técnico 02' },
   { user: 'financeiro',senha: 'W3ber_2026', nome: 'Financeiro',    perfil: 'financeiro', colaborador: null }
 ];
-
-// Restaurar usuários criados pelo admin + senhas/vínculos editados
-(function() {
-  // Carregar usuários extras criados pelo admin
-  try {
-    var extras = JSON.parse(localStorage.getItem('tw_usuarios_extras') || '[]');
-    extras.forEach(function(u) { if (!USUARIOS.find(x => x.perfil === u.perfil)) USUARIOS.push(u); });
-  } catch(e) {}
-  // Restaurar senhas e vínculos editados
-  USUARIOS.forEach(function(u) {
-    var s = localStorage.getItem('tw_udata_' + u.perfil);
-    if (s) { try { var d=JSON.parse(s); if(d.senha) u.senha=d.senha; if(d.colab!==undefined) u.colaborador=d.colab; } catch(e){} }
-    // Legado: tw_colab_*
-    var cv = localStorage.getItem('tw_colab_' + u.perfil);
-    if (cv !== null && !localStorage.getItem('tw_udata_' + u.perfil)) u.colaborador = cv || null;
-  });
-})();
 
 // TELAS DISPONÍVEIS
 const TELAS_DISPONIVEIS = [
@@ -1099,16 +1028,15 @@ const TELAS_DISPONIVEIS = [
 const PERMISSOES_PADRAO = {
   admin:      ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','pagamentos','finalizados','recibo','permissoes'],
   gerente:    ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','pagamentos','finalizados','recibo'],
-  tecnico01:  ['lancamentos'],
-  tecnico02:  ['lancamentos'],
+  tecnico01:  ['dashboard','lancamentos'],
+  tecnico02:  ['dashboard','lancamentos'],
   financeiro: ['dashboard','pagamentos','finalizados','recibo']
 };
 
 function getPermissoes(perfil) {
   const salvas = localStorage.getItem('tw_perms_' + perfil);
   if (salvas) return JSON.parse(salvas);
-  // Perfis dinâmicos (criados pelo admin) têm lancamentos por padrão
-  return PERMISSOES_PADRAO[perfil] || ['lancamentos'];
+  return PERMISSOES_PADRAO[perfil] || ['dashboard'];
 }
 
 function salvarPermissoes(perfil, telas) {
@@ -1163,13 +1091,9 @@ function fazerLogin() {
       localStorage.removeItem('tw_pass');
     }
     usuarioLogado = found;
-    // Restaurar vínculo de colaborador salvo
-    const dadosSalvos = localStorage.getItem('tw_udata_' + found.perfil);
-    if (dadosSalvos) { try { const d=JSON.parse(dadosSalvos); if(d.colab!==undefined) usuarioLogado.colaborador=d.colab; } catch(e){} }
-    else {
-      const vinculoSalvo = localStorage.getItem('tw_colab_' + found.perfil);
-      if (vinculoSalvo !== null) usuarioLogado.colaborador = vinculoSalvo;
-    }
+    // Carregar vínculo de colaborador salvo (para técnicos)
+    const vinculoSalvo = localStorage.getItem('tw_colab_' + found.perfil);
+    if (vinculoSalvo !== null) usuarioLogado.colaborador = vinculoSalvo;
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('sidebar-user').textContent = found.nome;
@@ -2177,15 +2101,40 @@ async function reverterPagamento(id) {
 // DASHBOARD
 // =============================================
 async function carregarDashboard() {
+  // Detectar se é técnico (tem colaborador vinculado)
+  const eTecnico = !!(usuarioLogado && usuarioLogado.colaborador);
+  const nomeColab = eTecnico ? usuarioLogado.colaborador.trim().toLowerCase() : null;
+
+  // Mostrar/ocultar filtro de funcionário e seletor do gráfico
+  const filtroFunc = document.getElementById('dash-filtro-func');
+  const chartFiltroFunc = document.getElementById('chart-filtro-func');
+  if (filtroFunc)     filtroFunc.style.display     = eTecnico ? 'none' : '';
+  if (chartFiltroFunc) chartFiltroFunc.style.display = eTecnico ? 'none' : '';
+
+  // Subtítulo personalizado
+  const subtitle = document.getElementById('dash-subtitle');
+  if (subtitle) subtitle.textContent = eTecnico
+    ? ('Minhas obras — ' + usuarioLogado.colaborador)
+    : 'Resumo de obras por funcionário';
+
   const mes = document.getElementById('dash-mes').value;
   const ano = document.getElementById('dash-ano').value;
-  const funcFiltro = document.getElementById('dash-func').value;
-  await preencherFiltroFuncs('dash-func');
-  const todos_raw = await getLancamentos();
-  let todos = [...todos_raw];
+  // Filtro de funcionário só usado por admin/gerente
+  const funcFiltro = eTecnico ? '' : (document.getElementById('dash-func').value || '');
 
+  // Preencher select de funcionários apenas para admin/gerente
+  if (!eTecnico) await preencherFiltroFuncs('dash-func');
+
+  const todos_raw = await getLancamentos();
+
+  // Filtrar por colaborador logado (técnico só vê os seus)
+  let base = eTecnico
+    ? todos_raw.filter(l => (l.funcionario_nome||'').trim().toLowerCase() === nomeColab)
+    : [...todos_raw];
+
+  // Filtro de período
   function passaFiltro(l) {
-    const dtRef = l.data_pagamento || l.data_fim || '';
+    const dtRef = l.data_pagamento || l.data_fim || l.data_inicio || '';
     if (!dtRef && (mes||ano)) return false;
     if (dtRef) {
       const [y,m] = dtRef.split('-');
@@ -2194,77 +2143,92 @@ async function carregarDashboard() {
     }
     return true;
   }
-  if (mes||ano) todos = todos.filter(passaFiltro);
+  let todos = (mes||ano) ? base.filter(passaFiltro) : base;
 
-  const pagos = todos.filter(l => l.pagamento_status === 'pago');
-  const aPagar = todos.filter(l => l.pagamento_status === 'concluido');
+  // Cards de resumo — calculados ANTES do filtro por funcionário específico
+  const pagos    = todos.filter(l => l.pagamento_status === 'pago');
+  const aPagar   = todos.filter(l => l.pagamento_status === 'concluido' || l.pagamento_status === 'parcial');
   const concluidos = todos.filter(l => l.situacao === 'Concluído');
+  const totalPago  = pagos.reduce((s,l) => s + parseFloat(l.valor_total||0), 0);
+  const totalAPagar = aPagar.reduce((s,l) => s + parseFloat(l.valor_total||0), 0);
 
-  const totalPago = pagos.reduce((s,l) => s + parseFloat(l.valor_total||0),0);
-  const totalAPagar = aPagar.reduce((s,l) => s + parseFloat(l.valor_total||0),0);
+  document.getElementById('d-total').textContent   = todos.length;
+  document.getElementById('d-pago').textContent    = 'R$ ' + totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  document.getElementById('d-apagar').textContent  = 'R$ ' + totalAPagar.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  document.getElementById('d-conc').textContent    = concluidos.length;
 
-  document.getElementById('d-total').textContent = todos.length;
-  document.getElementById('d-pago').textContent = 'R$ ' + totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2});
-  document.getElementById('d-apagar').textContent = 'R$ ' + totalAPagar.toLocaleString('pt-BR',{minimumFractionDigits:2});
-  document.getElementById('d-conc').textContent = concluidos.length;
+  // Filtro adicional por funcionário específico (apenas admin/gerente)
+  let filtrado = todos;
+  if (!eTecnico && funcFiltro) {
+    filtrado = todos.filter(l => l.funcionario_id === funcFiltro);
+  }
 
-  if (funcFiltro) todos = todos.filter(l => l.funcionario_id === funcFiltro);
+  // Renderizar gráfico — técnico vê só seus dados, admin vê todos
+  renderGraficos(base, eTecnico ? nomeColab : null);
 
+  // Tabela por funcionário
   const mapa = {};
-  todos.forEach(l => {
+  filtrado.forEach(l => {
     const fn = l.funcionario_nome || 'Sem Funcionário';
     if (!mapa[fn]) mapa[fn] = { pago:0, aPagar:0, totalPago:0, totalAPagar:0, obras:[] };
-    if (l.pagamento_status === 'pago') { mapa[fn].pago++; mapa[fn].totalPago += parseFloat(l.valor_total||0); }
-    else if (l.pagamento_status === 'concluido') { mapa[fn].aPagar++; mapa[fn].totalAPagar += parseFloat(l.valor_total||0); }
+    if (l.pagamento_status === 'pago') {
+      mapa[fn].pago++;
+      mapa[fn].totalPago += parseFloat(l.valor_total||0);
+    } else if (l.pagamento_status === 'concluido' || l.pagamento_status === 'parcial') {
+      mapa[fn].aPagar++;
+      mapa[fn].totalAPagar += parseFloat(l.valor_total||0);
+    }
     mapa[fn].obras.push(l);
   });
 
-  renderGraficos(todos_raw);
-
   const div = document.getElementById('dash-funcionarios');
-  if (!Object.keys(mapa).length) { div.innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>Nenhum dado no período.</p></div>'; return; }
+  if (!Object.keys(mapa).length) {
+    div.innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>Nenhum dado no período.</p></div>';
+    return;
+  }
+
   div.innerHTML = Object.entries(mapa).map(([fn, data]) => {
     const linhasObras = data.obras.map(o => {
       const status = o.pagamento_status === 'pago'
         ? '<span class="badge badge-pago">Pago</span>'
-        : o.situacao === 'Concluído'
-          ? '<span class="badge badge-concluido">A Pagar</span>'
-          : `<span class="badge badge-andamento">${o.situacao||'Em andamento'}</span>`;
+        : o.pagamento_status === 'parcial'
+          ? '<span class="badge badge-parcial">⚡ Parcial</span>'
+          : o.situacao === 'Concluído'
+            ? '<span class="badge badge-concluido">A Pagar</span>'
+            : '<span class="badge badge-andamento">' + (o.situacao||'Em andamento') + '</span>';
       const total = parseFloat(o.valor_total||0);
       const colorClass = o.pagamento_status === 'pago' ? 'color:var(--sucesso)' : 'color:var(--amarelo)';
-      return `<tr>
-        <td>${o.numero_pedido||'-'}</td>
-        <td>${o.cliente_nome||'-'}</td>
-        <td>${o.tipo_servico||'-'}</td>
-        <td>${o.quantidade||0} ${o.unidade||''}</td>
-        <td style="${colorClass};font-weight:600">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-        <td>${status}</td>
-        <td>${o.data_inicio||'-'}</td>
-      </tr>`;
+      return '<tr>'
+        + '<td>' + (o.numero_pedido||'-') + '</td>'
+        + '<td>' + (o.cliente_nome||'-') + '</td>'
+        + '<td>' + (o.tipo_servico||'-') + '</td>'
+        + '<td>' + (o.quantidade||0) + ' ' + (o.unidade||'') + '</td>'
+        + '<td style="' + colorClass + ';font-weight:600">R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</td>'
+        + '<td>' + status + '</td>'
+        + '<td>' + (o.data_inicio||'-') + '</td>'
+        + '</tr>';
     }).join('');
+
     const totalGeral = data.totalPago + data.totalAPagar;
-    return `
-    <div class="func-card">
-      <div class="func-card-header">
-        <h4>👷 ${fn}</h4>
-        <div style="display:flex;gap:20px;align-items:center">
-          <span style="color:var(--sucesso);font-size:13px;font-weight:600">✅ Pago: R$ ${data.totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
-          <span style="color:var(--amarelo);font-size:13px;font-weight:600">⏳ A Pagar: R$ ${data.totalAPagar.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
-          <span style="color:#666;font-size:12px">${data.obras.length} obra(s)</span>
-        </div>
-      </div>
-      <div style="padding:0 0 4px 0">
-        <table class="func-obras-table">
-          <thead><tr>
-            <th>Nº Pedido</th><th>Cliente</th><th>Serviço</th><th>Qtd/Un</th><th>Total</th><th>Status</th><th>Início</th>
-          </tr></thead>
-          <tbody>${linhasObras}</tbody>
-        </table>
-        <div class="func-obras-total">
-          <span>Total Geral: <strong style="color:var(--branco)">R$ ${totalGeral.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></span>
-        </div>
-      </div>
-    </div>`;
+    return '<div class="func-card">'
+      + '<div class="func-card-header">'
+        + '<h4>👷 ' + fn + '</h4>'
+        + '<div style="display:flex;gap:20px;align-items:center">'
+          + '<span style="color:var(--sucesso);font-size:13px;font-weight:600">✅ Pago: R$ ' + data.totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
+          + '<span style="color:var(--amarelo);font-size:13px;font-weight:600">⏳ A Pagar: R$ ' + data.totalAPagar.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
+          + '<span style="color:#666;font-size:12px">' + data.obras.length + ' obra(s)</span>'
+        + '</div>'
+      + '</div>'
+      + '<div style="padding:0 0 4px 0">'
+        + '<table class="func-obras-table">'
+          + '<thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Serviço</th><th>Qtd/Un</th><th>Total</th><th>Status</th><th>Início</th></tr></thead>'
+          + '<tbody>' + linhasObras + '</tbody>'
+        + '</table>'
+        + '<div class="func-obras-total">'
+          + '<span>Total Geral: <strong style="color:var(--branco)">R$ ' + totalGeral.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</strong></span>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
   }).join('');
 }
 
@@ -2272,61 +2236,84 @@ async function carregarDashboard() {
 // GRÁFICOS
 // =============================================
 let _todosParaGrafico = [];
+let _graficoColabFixo = null; // nome do colaborador fixo (para técnicos)
 
-function renderGraficos(todos) {
+function renderGraficos(todos, colabFixo) {
   _todosParaGrafico = todos;
+  _graficoColabFixo = colabFixo || null;
+
   const sel = document.getElementById('chart-func-sel');
-  if (sel && sel.options.length <= 1) {
-    const funcsUnicos = [...new Set(todos.map(l => l.funcionario_nome).filter(Boolean))].sort();
-    funcsUnicos.forEach(fn => {
-      const opt = document.createElement('option');
-      opt.value = fn; opt.textContent = fn;
-      sel.appendChild(opt);
-    });
+  if (sel) {
+    if (colabFixo) {
+      // Técnico: travar no próprio nome, sem opções extras
+      sel.innerHTML = '<option value="' + colabFixo + '">' + usuarioLogado.colaborador + '</option>';
+      sel.value = colabFixo;
+    } else {
+      // Admin/gerente: popular select normalmente
+      if (sel.options.length <= 1) {
+        const funcsUnicos = [...new Set(todos.map(l => l.funcionario_nome).filter(Boolean))].sort();
+        funcsUnicos.forEach(fn => {
+          const opt = document.createElement('option');
+          opt.value = fn; opt.textContent = fn;
+          sel.appendChild(opt);
+        });
+      }
+    }
   }
   atualizarGraficoFunc();
 }
 
 function atualizarGraficoFunc() {
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const sel = document.getElementById('chart-func-sel');
+  const sel    = document.getElementById('chart-func-sel');
   const anoSel = document.getElementById('chart-ano-sel');
   if (!sel || !anoSel) return;
-  const funcEscolhido = sel.value;
-  const anoEscolhido = anoSel.value;
-  const base = funcEscolhido ? _todosParaGrafico.filter(l => l.funcionario_nome === funcEscolhido) : _todosParaGrafico;
-  const dadosPago = [];
+
+  // Técnico: usar colabFixo; admin: usar seleção do dropdown
+  const funcEscolhido = _graficoColabFixo || sel.value;
+  const anoEscolhido  = anoSel.value;
+
+  const base = funcEscolhido
+    ? _todosParaGrafico.filter(l => (l.funcionario_nome||'').trim().toLowerCase() === funcEscolhido.trim().toLowerCase())
+    : _todosParaGrafico;
+
+  const dadosPago   = [];
   const dadosAPagar = [];
   for (let m = 1; m <= 12; m++) {
-    const mm = String(m).padStart(2,'0');
+    const mm   = String(m).padStart(2,'0');
     const pref = anoEscolhido + '-' + mm;
-    const pagos = base.filter(l => (l.data_pagamento||'').startsWith(pref) && l.pagamento_status === 'pago');
-    const aPagar = base.filter(l => {
+    const pagosM   = base.filter(l => (l.data_pagamento||'').startsWith(pref) && l.pagamento_status === 'pago');
+    const aPagarM  = base.filter(l => {
       const dt = l.data_fim || l.data_inicio || '';
       return dt.startsWith(pref) && l.pagamento_status !== 'pago';
     });
-    dadosPago.push(pagos.reduce((s,l) => s + parseFloat(l.valor_total||0), 0));
-    dadosAPagar.push(aPagar.reduce((s,l) => s + parseFloat(l.valor_total||0), 0));
+    dadosPago.push(pagosM.reduce((s,l) => s + parseFloat(l.valor_total||0), 0));
+    dadosAPagar.push(aPagarM.reduce((s,l) => s + parseFloat(l.valor_total||0), 0));
   }
+
   const ctxM = document.getElementById('chart-mensal');
   if (!ctxM) return;
   if (_chartMensal) _chartMensal.destroy();
-  const titulo = funcEscolhido ? funcEscolhido : 'Todos os Funcionários';
+
+  const titulo = funcEscolhido
+    ? (usuarioLogado && usuarioLogado.colaborador && _graficoColabFixo ? usuarioLogado.colaborador : funcEscolhido)
+    : 'Todos os Funcionários';
+
   _chartMensal = new Chart(ctxM, {
     type: 'bar',
     data: {
       labels: MESES,
       datasets: [
-        { label: 'Pago', data: dadosPago, backgroundColor: 'rgba(39,174,96,0.8)', borderColor: '#27AE60', borderWidth: 1, borderRadius: 5 },
+        { label: 'Pago',    data: dadosPago,   backgroundColor: 'rgba(39,174,96,0.8)',  borderColor: '#27AE60', borderWidth: 1, borderRadius: 5 },
         { label: 'A Pagar', data: dadosAPagar, backgroundColor: 'rgba(245,166,35,0.8)', borderColor: '#F5A623', borderWidth: 1, borderRadius: 5 }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#AAA', font: { size: 12 } } },
-        title: { display: true, text: titulo + ' — ' + anoEscolhido, color: '#CCC', font: { size: 13, weight: '600' }, padding: { bottom: 10 } },
-        tooltip: { callbacks: { label: ctx => ' R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) } }
+        legend:  { labels: { color: '#AAA', font: { size: 12 } } },
+        title:   { display: true, text: titulo + ' — ' + anoEscolhido, color: '#CCC', font: { size: 13, weight: '600' }, padding: { bottom: 10 } },
+        tooltip: { callbacks: { label: ctx => ' R$ ' + ctx.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:2}) } }
       },
       scales: {
         x: { ticks: { color: '#888' }, grid: { color: '#2a2a2a' } },
@@ -2381,230 +2368,89 @@ async function editarLancDireto(id, voltarPara) {
 function imprimirRelatorio() { window.print(); }
 
 // =============================================
-// PERMISSÕES — GESTÃO DE USUÁRIOS
+// PERMISSÕES
 // =============================================
-
-// Perfil único gerado a partir do login
-function gerarPerfil(login) {
-  return 'u_' + login.toLowerCase().replace(/[^a-z0-9]/g, '_');
-}
-
-// Abrir modal de novo usuário (também serve para editar)
-async function abrirModalNovoUsuario(perfil) {
-  // Carregar lista de colaboradores para o select
-  const sel = document.getElementById('mnu-colab');
-  sel.innerHTML = '<option value="">— Nenhum (acesso geral) —</option>';
-  try {
-    const colabs = await sbGet('colaboradores', 'order=nome.asc&ativo=neq.Não');
-    colabs.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.nome; opt.textContent = c.nome;
-      sel.appendChild(opt);
-    });
-  } catch(e) {}
-
-  if (perfil) {
-    // Modo edição
-    const u = USUARIOS.find(x => x.perfil === perfil);
-    if (!u) return;
-    document.getElementById('mnu-titulo').textContent = '✏️ Editar Usuário — ' + u.nome;
-    document.getElementById('mnu-perfil-original').value = perfil;
-    document.getElementById('mnu-nome').value = u.nome;
-    document.getElementById('mnu-login').value = u.user;
-    document.getElementById('mnu-login').readOnly = true;
-    document.getElementById('mnu-login').style.cssText += ';background:#1a1a1a;color:#666;cursor:not-allowed';
-    document.getElementById('mnu-senha').value = u.senha;
-    sel.value = u.colaborador || '';
-  } else {
-    // Modo criação
-    document.getElementById('mnu-titulo').textContent = '➕ Novo Usuário';
-    document.getElementById('mnu-perfil-original').value = '';
-    document.getElementById('mnu-nome').value = '';
-    document.getElementById('mnu-login').value = '';
-    document.getElementById('mnu-login').readOnly = false;
-    document.getElementById('mnu-login').style.cssText = document.getElementById('mnu-login').style.cssText.replace(/background[^;]+;|color[^;]+;|cursor[^;]+;/g,'');
-    document.getElementById('mnu-login').style.background = '#222';
-    document.getElementById('mnu-login').style.color = '#EEE';
-    document.getElementById('mnu-login').style.cursor = 'text';
-    document.getElementById('mnu-senha').value = '';
-    sel.value = '';
-  }
-  abrirModal('modal-novo-usuario');
-}
-
-function salvarNovoUsuario() {
-  const perfilOriginal = document.getElementById('mnu-perfil-original').value;
-  const nome   = document.getElementById('mnu-nome').value.trim();
-  const login  = document.getElementById('mnu-login').value.trim().toLowerCase();
-  const senha  = document.getElementById('mnu-senha').value.trim();
-  const colab  = document.getElementById('mnu-colab').value;
-
-  if (!nome || !login || !senha) { toast('Preencha nome, login e senha.','error'); return; }
-
-  if (perfilOriginal) {
-    // Editar usuário existente
-    const u = USUARIOS.find(x => x.perfil === perfilOriginal);
-    if (!u) return;
-    u.nome  = nome;
-    u.senha = senha;
-    u.colaborador = colab || null;
-    localStorage.setItem('tw_udata_' + perfilOriginal, JSON.stringify({ senha, colab: colab || null }));
-    _persistirExtras();
-    fecharModal('modal-novo-usuario');
-    toast('Usuário "' + nome + '" atualizado! ✅');
-    carregarPermissoes();
-    return;
-  }
-
-  // Novo usuário — verificar login duplicado
-  if (USUARIOS.find(x => x.user === login)) { toast('Login "' + login + '" já está em uso.','error'); return; }
-
-  const perfil = gerarPerfil(login);
-  const novoUser = { user: login, senha, nome, perfil, colaborador: colab || null };
-  USUARIOS.push(novoUser);
-  _persistirExtras();
-  fecharModal('modal-novo-usuario');
-  toast('Usuário "' + nome + '" criado! Login: ' + login,'success');
-  carregarPermissoes();
-}
-
-function excluirUsuario(perfil) {
-  const u = USUARIOS.find(x => x.perfil === perfil);
-  if (!u) return;
-  // Perfis base não podem ser excluídos
-  const BASE = ['admin','gerente','tecnico01','tecnico02','financeiro'];
-  if (BASE.includes(perfil)) { toast('Usuários base não podem ser excluídos.','error'); return; }
-  if (!confirm('Excluir o usuário "' + u.nome + '"? Esta ação não pode ser desfeita.')) return;
-  const idx = USUARIOS.indexOf(u);
-  if (idx > -1) USUARIOS.splice(idx, 1);
-  localStorage.removeItem('tw_udata_' + perfil);
-  localStorage.removeItem('tw_perms_' + perfil);
-  _persistirExtras();
-  toast('Usuário removido.','info');
-  carregarPermissoes();
-}
-
-function _persistirExtras() {
-  // Salvar apenas usuários não-base
-  const BASE = ['admin','gerente','tecnico01','tecnico02','financeiro'];
-  const extras = USUARIOS.filter(u => !BASE.includes(u.perfil));
-  localStorage.setItem('tw_usuarios_extras', JSON.stringify(extras));
-}
-
-// Abrir modal de permissões individuais
-function abrirPermIndividual(perfil) {
-  const u = USUARIOS.find(x => x.perfil === perfil);
-  if (!u) return;
-  window._permPerfilAtivo = perfil;
-  document.getElementById('mperm-titulo').textContent = '🔐 Permissões — ' + u.nome;
-
-  const perms = getPermissoes(perfil);
-  const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin);
-  document.getElementById('mperm-body').innerHTML =
-    '<div class="perm-grid" style="margin-top:4px">'
-    + telas.map(t =>
-        '<label class="perm-check ' + (perms.includes(t.id) ? 'checked' : '') + '" id="mperm-lbl-' + t.id + '">'
-        + '<input type="checkbox" ' + (perms.includes(t.id) ? 'checked' : '')
-        + ' onchange="togglePermModal(\'' + t.id + '\',this.checked)"'
-        + ' style="accent-color:var(--amarelo);width:16px;height:16px;cursor:pointer" />'
-        + t.label + '</label>'
-      ).join('')
-    + '</div>';
-  abrirModal('modal-perm-individual');
-}
-
-function togglePermModal(tela, ativo) {
-  const perfil = window._permPerfilAtivo;
-  if (!perfil) return;
-  const perms = getPermissoes(perfil);
-  const novas = ativo ? [...new Set([...perms, tela])] : perms.filter(t => t !== tela);
-  salvarPermissoes(perfil, novas);
-  const lbl = document.getElementById('mperm-lbl-' + tela);
-  if (lbl) lbl.classList.toggle('checked', ativo);
-  // Atualizar sidebar se for o usuário logado
-  if (usuarioLogado && usuarioLogado.perfil === perfil) aplicarPermissoesSidebar();
-}
-
-function marcarTodosModal(ativo) {
-  const perfil = window._permPerfilAtivo;
-  if (!perfil) return;
-  const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin).map(t => t.id);
-  salvarPermissoes(perfil, ativo ? telas : []);
-  abrirPermIndividual(perfil);
-}
-
-function restaurarPadraoModal() {
-  const perfil = window._permPerfilAtivo;
-  if (!perfil) return;
-  localStorage.removeItem('tw_perms_' + perfil);
-  abrirPermIndividual(perfil);
-  toast('Permissões restauradas.','info');
-}
-
 function carregarPermissoes() {
+  const perfis = [
+    { perfil: 'gerente',    nome: 'Gerente',     tecnico: false },
+    { perfil: 'tecnico01',  nome: 'Técnico 01',  tecnico: true },
+    { perfil: 'tecnico02',  nome: 'Técnico 02',  tecnico: true },
+    { perfil: 'financeiro', nome: 'Financeiro',  tecnico: false }
+  ];
+  const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin);
   const container = document.getElementById('perm-container');
-  const usuariosVisiveis = USUARIOS.filter(u => u.perfil !== 'admin');
-  const BASE = ['admin','gerente','tecnico01','tecnico02','financeiro'];
+  container.innerHTML = perfis.map(p => {
+    const perms = getPermissoes(p.perfil);
+    const checkboxes = telas.map(t => `
+      <label class="perm-check ${perms.includes(t.id) ? 'checked' : ''}" id="lbl-${p.perfil}-${t.id}">
+        <input type="checkbox" ${perms.includes(t.id) ? 'checked' : ''}
+          onchange="togglePerm('${p.perfil}','${t.id}',this.checked)"
+          style="accent-color:var(--amarelo);width:16px;height:16px;cursor:pointer" />
+        ${t.label}
+      </label>`).join('');
 
-  container.innerHTML = usuariosVisiveis.map(u => {
-    const perms    = getPermissoes(u.perfil);
-    const isBase   = BASE.includes(u.perfil);
-    const colabTag = u.colaborador
-      ? '<span style="background:rgba(41,128,185,0.2);color:#5dade2;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:600">👤 ' + u.colaborador + '</span>'
-      : '<span style="color:#444;font-size:12px">sem vínculo</span>';
-    const permsResumo = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin && perms.includes(t.id)).map(t => t.label).join(' · ') || '—';
+    // Campo de vínculo para técnicos
+    const vinculoHtml = p.tecnico ? (() => {
+      const usuario = USUARIOS.find(u => u.perfil === p.perfil);
+      const vinculoAtual = localStorage.getItem('tw_colab_' + p.perfil) || (usuario ? usuario.colaborador || '' : '');
+      return `
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase;margin-bottom:8px">🔗 Vínculo com Colaborador</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="vinculo-${p.perfil}" value="${vinculoAtual}"
+            placeholder="Nome exato do colaborador no sistema..."
+            style="flex:1;padding:9px 13px;background:#222;border:1px solid #444;border-radius:6px;color:#EEE;font-size:13px" />
+          <button class="btn btn-primary btn-sm" onclick="salvarVinculo('${p.perfil}')">Salvar</button>
+        </div>
+        <div style="font-size:11px;color:#666;margin-top:6px">⚠️ Digite exatamente como aparece no cadastro de colaboradores</div>
+      </div>`;
+    })() : '';
 
-    return '<div class="card" style="margin-bottom:12px;padding:18px 20px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">'
-        // Lado esquerdo: info do usuário
-        + '<div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0">'
-          + '<div style="background:#252525;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👤</div>'
-          + '<div style="min-width:0">'
-            + '<div style="font-size:15px;font-weight:700;color:#EEE">' + u.nome + '</div>'
-            + '<div style="font-size:12px;color:#666;margin-top:1px">Login: <strong style="color:#888">' + u.user + '</strong>'
-            + ' &nbsp;·&nbsp; ' + colabTag + '</div>'
-            + '<div style="font-size:11px;color:#444;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + permsResumo + '</div>'
-          + '</div>'
-        + '</div>'
-        // Lado direito: ações
-        + '<div style="display:flex;gap:8px;flex-shrink:0">'
-          + '<button class="btn btn-ghost btn-sm" onclick="abrirPermIndividual(\'' + u.perfil + '\')" title="Editar permissões">🔐 Permissões</button>'
-          + '<button class="btn btn-ghost btn-sm" onclick="abrirModalNovoUsuario(\'' + u.perfil + '\')" title="Editar dados">✏️ Editar</button>'
-          + (!isBase ? '<button class="btn btn-danger btn-sm" onclick="excluirUsuario(\'' + u.perfil + '\')" title="Excluir usuário">🗑️</button>' : '')
-        + '</div>'
-      + '</div>'
-    + '</div>';
+    return `
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin:0">👤 ${p.nome}</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="marcarTodos('${p.perfil}',true)">✅ Todas</button>
+          <button class="btn btn-ghost btn-sm" onclick="marcarTodos('${p.perfil}',false)">❌ Nenhuma</button>
+          <button class="btn btn-ghost btn-sm" onclick="restaurarPadrao('${p.perfil}')">↩️ Padrão</button>
+        </div>
+      </div>
+      ${vinculoHtml}
+      <div class="perm-grid" id="perm-grid-${p.perfil}">${checkboxes}</div>
+    </div>`;
   }).join('');
 }
 
 function salvarVinculo(perfil) {
-  // Legado — mantido para compatibilidade
-  const val = document.getElementById('vinculo-' + perfil);
-  if (!val) return;
-  localStorage.setItem('tw_colab_' + perfil, val.value.trim());
+  const val = document.getElementById('vinculo-' + perfil).value.trim();
+  localStorage.setItem('tw_colab_' + perfil, val);
+  // Atualizar o usuário em memória se estiver logado
   const u = USUARIOS.find(x => x.perfil === perfil);
-  if (u) u.colaborador = val.value.trim() || null;
-  toast('Vínculo salvo.','success');
+  if (u) u.colaborador = val;
+  toast('Vínculo salvo: ' + (val || '(removido)'), 'success');
 }
 
 function togglePerm(perfil, tela, ativo) {
   const perms = getPermissoes(perfil);
   const novas = ativo ? [...new Set([...perms, tela])] : perms.filter(t => t !== tela);
   salvarPermissoes(perfil, novas);
-  const lbl = document.getElementById('lbl-' + perfil + '-' + tela);
+  const lbl = document.getElementById(`lbl-${perfil}-${tela}`);
   if (lbl) lbl.classList.toggle('checked', ativo);
+  toast(`Permissão ${ativo ? 'concedida' : 'removida'}: ${tela}`, ativo ? 'success' : 'info');
 }
 
 function marcarTodos(perfil, ativo) {
   const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin).map(t => t.id);
   salvarPermissoes(perfil, ativo ? telas : []);
   carregarPermissoes();
+  toast(ativo ? 'Todas as permissões concedidas.' : 'Todas as permissões removidas.', 'info');
 }
 
 function restaurarPadrao(perfil) {
   localStorage.removeItem('tw_perms_' + perfil);
   carregarPermissoes();
-  toast('Permissões restauradas.', 'info');
+  toast('Permissões restauradas para o padrão.', 'info');
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el => {
