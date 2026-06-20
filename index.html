@@ -643,9 +643,12 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
 
     <!-- TELA DE PERMISSÕES -->
     <div class="tela" id="t-permissoes">
-      <div class="page-header">
-        <h2>🔐 Permissões de Acesso</h2>
-        <p>Defina quais telas cada perfil pode acessar</p>
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <h2>🔐 Permissões de Acesso</h2>
+          <p>Gerencie usuários, senhas, vínculos e telas disponíveis por perfil</p>
+        </div>
+        <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">+ Novo Usuário</button>
       </div>
       <div id="perm-container"></div>
     </div>
@@ -816,16 +819,16 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
     <input type="hidden" id="mpag-id" />
     <input type="hidden" id="mpag-valor-total" />
     <input type="hidden" id="mpag-valor-pago-anterior" />
-    <input type="hidden" id="mpag-valor-adiantado" />
     <div id="mpag-resumo" style="background:#222;border-radius:8px;padding:16px;margin-bottom:18px;font-size:13px;color:#CCC;line-height:1.8"></div>
     <!-- Saldo devedor em destaque -->
-    <div id="mpag-saldo-box" style="border-radius:8px;padding:14px 16px;margin-bottom:18px">
-      <!-- preenchido dinamicamente pelo abrirPagar -->
+    <div id="mpag-saldo-box" style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:14px 16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#888">Saldo a Pagar</span>
+      <span id="mpag-saldo-label" style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:var(--amarelo)">R$ 0,00</span>
     </div>
     <div class="form-row cols-2">
       <div class="field">
         <label>Valor Pago Agora <span style="color:var(--amarelo)">*</span></label>
-        <input type="number" id="mpag-valor" step="0.01" min="0" placeholder="0,00" oninput="atualizarSaldoPagar()" style="font-size:16px;font-weight:600" />
+        <input type="number" id="mpag-valor" step="0.01" min="0.01" placeholder="0,00" oninput="atualizarSaldoPagar()" style="font-size:16px;font-weight:600" />
       </div>
       <div class="field"><label>Data do Pagamento</label><input type="date" id="mpag-data" /></div>
     </div>
@@ -844,7 +847,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-pagar')">Cancelar</button>
-      <button class="btn btn-success" id="btn-confirmar-pag" onclick="confirmarPagamento()">✅ Confirmar Pagamento</button>
+      <button class="btn btn-success" onclick="confirmarPagamento()">✅ Confirmar Pagamento</button>
     </div>
   </div>
 </div>
@@ -935,6 +938,59 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
   </div>
 </div>
 
+<!-- Modal Novo Usuário -->
+<div class="modal-overlay" id="modal-novo-usuario">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="fecharModal('modal-novo-usuario')" title="Fechar">✕</button>
+    <h3 id="mnu-titulo">➕ Novo Usuário</h3>
+    <input type="hidden" id="mnu-perfil-original" />
+    <div class="form-row cols-2">
+      <div class="field">
+        <label>Nome de Exibição *</label>
+        <input id="mnu-nome" placeholder="Ex: João da Silva" />
+      </div>
+      <div class="field">
+        <label>Login (único) *</label>
+        <input id="mnu-login" placeholder="Ex: joao" style="text-transform:lowercase" oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')" />
+      </div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="field">
+        <label>Senha *</label>
+        <input id="mnu-senha" placeholder="Senha de acesso" />
+      </div>
+      <div class="field">
+        <label>Colaborador vinculado</label>
+        <select id="mnu-colab" style="width:100%;padding:10px 13px;background:#222;border:1px solid #444;border-radius:6px;color:#EEE;font-size:13px">
+          <option value="">— Nenhum (acesso geral) —</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:#1a1a1a;border-radius:8px;padding:12px 14px;font-size:12px;color:#666;margin-bottom:4px">
+      💡 Se vincular um colaborador, o usuário só verá os lançamentos daquele funcionário na tela de Lançamentos.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-novo-usuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoUsuario()">💾 Salvar Usuário</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Permissões Individuais -->
+<div class="modal-overlay" id="modal-perm-individual">
+  <div class="modal" style="max-width:560px">
+    <button class="modal-close" onclick="fecharModal('modal-perm-individual')" title="Fechar">✕</button>
+    <h3 id="mperm-titulo">🔐 Permissões</h3>
+    <div id="mperm-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="marcarTodosModal(true)">✅ Todas</button>
+      <button class="btn btn-ghost btn-sm" onclick="marcarTodosModal(false)">❌ Nenhuma</button>
+      <button class="btn btn-ghost btn-sm" onclick="restaurarPadraoModal()">↩️ Padrão</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-perm-individual')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -999,14 +1055,31 @@ async function sbDelete(table, id) {
   if (!r.ok) throw new Error(await r.text());
 }
 
-// USUÁRIOS DO SISTEMA
-const USUARIOS = [
+// USUÁRIOS DO SISTEMA (gerenciados dinamicamente pelo admin)
+var USUARIOS = [
   { user: 'admin',     senha: 'weber2025',  nome: 'Administrador', perfil: 'admin',      colaborador: null },
   { user: 'gerente',   senha: 'weber123',   nome: 'Gerente',       perfil: 'gerente',    colaborador: null },
-  { user: 'tecnico01', senha: 'W3ber_2026', nome: 'Técnico 01',    perfil: 'tecnico01',  colaborador: 'Técnico 01' },
-  { user: 'tecnico02', senha: 'W3ber_2026', nome: 'Técnico 02',    perfil: 'tecnico02',  colaborador: 'Técnico 02' },
+  { user: 'tecnico01', senha: 'W3ber_2026', nome: 'Técnico 01',    perfil: 'tecnico01',  colaborador: null },
+  { user: 'tecnico02', senha: 'W3ber_2026', nome: 'Técnico 02',    perfil: 'tecnico02',  colaborador: null },
   { user: 'financeiro',senha: 'W3ber_2026', nome: 'Financeiro',    perfil: 'financeiro', colaborador: null }
 ];
+
+// Restaurar usuários criados pelo admin + senhas/vínculos editados
+(function() {
+  // Carregar usuários extras criados pelo admin
+  try {
+    var extras = JSON.parse(localStorage.getItem('tw_usuarios_extras') || '[]');
+    extras.forEach(function(u) { if (!USUARIOS.find(x => x.perfil === u.perfil)) USUARIOS.push(u); });
+  } catch(e) {}
+  // Restaurar senhas e vínculos editados
+  USUARIOS.forEach(function(u) {
+    var s = localStorage.getItem('tw_udata_' + u.perfil);
+    if (s) { try { var d=JSON.parse(s); if(d.senha) u.senha=d.senha; if(d.colab!==undefined) u.colaborador=d.colab; } catch(e){} }
+    // Legado: tw_colab_*
+    var cv = localStorage.getItem('tw_colab_' + u.perfil);
+    if (cv !== null && !localStorage.getItem('tw_udata_' + u.perfil)) u.colaborador = cv || null;
+  });
+})();
 
 // TELAS DISPONÍVEIS
 const TELAS_DISPONIVEIS = [
@@ -1026,15 +1099,16 @@ const TELAS_DISPONIVEIS = [
 const PERMISSOES_PADRAO = {
   admin:      ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','pagamentos','finalizados','recibo','permissoes'],
   gerente:    ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','pagamentos','finalizados','recibo'],
-  tecnico01:  ['dashboard','lancamentos'],
-  tecnico02:  ['dashboard','lancamentos'],
+  tecnico01:  ['lancamentos'],
+  tecnico02:  ['lancamentos'],
   financeiro: ['dashboard','pagamentos','finalizados','recibo']
 };
 
 function getPermissoes(perfil) {
   const salvas = localStorage.getItem('tw_perms_' + perfil);
   if (salvas) return JSON.parse(salvas);
-  return PERMISSOES_PADRAO[perfil] || ['dashboard'];
+  // Perfis dinâmicos (criados pelo admin) têm lancamentos por padrão
+  return PERMISSOES_PADRAO[perfil] || ['lancamentos'];
 }
 
 function salvarPermissoes(perfil, telas) {
@@ -1089,9 +1163,13 @@ function fazerLogin() {
       localStorage.removeItem('tw_pass');
     }
     usuarioLogado = found;
-    // Carregar vínculo de colaborador salvo (para técnicos)
-    const vinculoSalvo = localStorage.getItem('tw_colab_' + found.perfil);
-    if (vinculoSalvo !== null) usuarioLogado.colaborador = vinculoSalvo;
+    // Restaurar vínculo de colaborador salvo
+    const dadosSalvos = localStorage.getItem('tw_udata_' + found.perfil);
+    if (dadosSalvos) { try { const d=JSON.parse(dadosSalvos); if(d.colab!==undefined) usuarioLogado.colaborador=d.colab; } catch(e){} }
+    else {
+      const vinculoSalvo = localStorage.getItem('tw_colab_' + found.perfil);
+      if (vinculoSalvo !== null) usuarioLogado.colaborador = vinculoSalvo;
+    }
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('sidebar-user').textContent = found.nome;
@@ -1894,168 +1972,127 @@ async function abrirPagar(id) {
   const l = todos.find(x => x.id === id);
   if (!l) { toast('Registro não encontrado.','error'); return; }
 
-  // Buscar parcelas de pagamento já feitas
   let parcelas = [];
   try { parcelas = await sbGet('pagamentos_parciais', `lancamento_id=eq.${id}&order=data_pagamento.asc`); } catch(e) {}
 
-  // Buscar adiantamentos
-  let adiants = [];
-  try { adiants = await sbGet('adiantamentos', `lancamento_id=eq.${id}&order=data.asc`); } catch(e) {}
-
-  const total        = parseFloat(l.valor_total||0);
-  const pagoAnterior = parcelas.reduce((s,p) => s + parseFloat(p.valor||0), 0);
-  const totalAdiant  = adiants.reduce((s,a) => s + parseFloat(a.valor||0), 0);
-  // Saldo real = total - já pago em parcelas - adiantamentos
-  const saldoReal    = Math.max(0, total - pagoAnterior - totalAdiant);
-  const jadCoberto   = totalAdiant >= (total - pagoAnterior); // adiantamento cobre o restante
+  const total = parseFloat(l.valor_total||0);
+  const pagoanterior = parcelas.reduce((s,p) => s + parseFloat(p.valor||0), 0);
+  const saldo = total - pagoanterior;
 
   document.getElementById('mpag-id').value = id;
   document.getElementById('mpag-valor-total').value = total;
-  document.getElementById('mpag-valor-pago-anterior').value = pagoAnterior;
-  document.getElementById('mpag-valor-adiantado').value = totalAdiant;
+  document.getElementById('mpag-valor-pago-anterior').value = pagoanterior;
   document.getElementById('mpag-data').value = new Date().toISOString().split('T')[0];
-  document.getElementById('mpag-valor').value = saldoReal > 0 ? '' : '0';
+  document.getElementById('mpag-valor').value = '';
   document.getElementById('mpag-obs').value = '';
   document.getElementById('mpag-preview').style.display = 'none';
+  document.getElementById('mpag-saldo-label').textContent = 'R$ ' + saldo.toLocaleString('pt-BR',{minimumFractionDigits:2});
 
-  // Box de saldo — cor e conteúdo dinâmico
-  const saldoBox = document.getElementById('mpag-saldo-box');
-  if (jadCoberto) {
-    saldoBox.style.cssText = 'background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.4);border-radius:8px;padding:14px 16px;margin-bottom:18px';
-    saldoBox.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-      + '<span style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#888">Saldo a Pagar</span>'
-      + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:24px;font-weight:700;color:#58d68d">R$ 0,00</span>'
-      + '</div>'
-      + '<div style="font-size:12px;color:#58d68d">✅ Adiantamento de R$ ' + totalAdiant.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' cobre o valor restante. Confirme para fechar o pedido.</div>';
-    // mostrar preview já como pago total
-    document.getElementById('mpag-preview').style.display = 'block';
-    document.getElementById('mpag-preview-texto').innerHTML = '<span style="color:#58d68d">✅ Adiantamento integral — lançamento será marcado como <strong>Pago</strong></span>';
-  } else {
-    saldoBox.style.cssText = 'background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:14px 16px;margin-bottom:18px';
-    saldoBox.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"'
-      + (totalAdiant > 0 ? ' style="margin-bottom:6px"' : '') + '>'
-      + '<span style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#888">Saldo a Pagar</span>'
-      + '<span id="mpag-saldo-label" style="font-family:\'Barlow Condensed\',sans-serif;font-size:24px;font-weight:700;color:var(--amarelo)">R$ ' + saldoReal.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
-      + '</div>'
-      + (totalAdiant > 0 ? '<div style="font-size:12px;color:#5dade2">💵 Adiantamento abatido: R$ ' + totalAdiant.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' (de R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' total)</div>' : '');
-  }
-
-  // Histórico de parcelas e adiantamentos no resumo
   let historicoHtml = '';
-  if (adiants.length > 0) {
-    historicoHtml += '<div style="margin-top:10px;border-top:1px solid #333;padding-top:10px">'
-      + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#5dade2;margin-bottom:6px">Adiantamentos</div>'
-      + adiants.map((a,i) => {
-          const dt = a.data ? new Date(a.data+'T12:00:00').toLocaleDateString('pt-BR') : '-';
-          return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#AAA;margin-bottom:3px">'
-            + '<span>Adiant. ' + (i+1) + ' — ' + dt + (a.forma?' ('+a.forma+')':'') + '</span>'
-            + '<span style="color:#5dade2">R$ ' + parseFloat(a.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
-            + '</div>';
-        }).join('')
-      + '</div>';
-  }
   if (parcelas.length > 0) {
-    historicoHtml += '<div style="margin-top:10px;border-top:1px solid #333;padding-top:10px">'
-      + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:6px">Pagamentos anteriores</div>'
-      + parcelas.map((p,i) => {
-          const dt = p.data_pagamento ? new Date(p.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR') : '-';
-          return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#AAA;margin-bottom:3px">'
-            + '<span>Parcela ' + (i+1) + ' — ' + dt + (p.forma?' ('+p.forma+')':'') + '</span>'
-            + '<span style="color:#58d68d">R$ ' + parseFloat(p.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
-            + '</div>';
-        }).join('')
-      + '</div>';
+    historicoHtml = `<div style="margin-top:10px;border-top:1px solid #333;padding-top:10px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:6px">Pagamentos anteriores</div>
+      ${parcelas.map((p,i) => {
+        const dt = p.data_pagamento ? new Date(p.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+        return `<div style="display:flex;justify-content:space-between;font-size:12px;color:#AAA;margin-bottom:3px">
+          <span>Parcela ${i+1} — ${dt} ${p.forma?'('+p.forma+')':''}</span>
+          <span style="color:#58d68d">R$ ${parseFloat(p.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
   }
 
-  document.getElementById('mpag-resumo').innerHTML =
-    '<b>Pedido:</b> ' + l.numero_pedido + '<br>'
-    + '<b>Cliente:</b> ' + l.cliente_nome + '<br>'
-    + '<b>Funcionário:</b> ' + l.funcionario_nome + '<br>'
-    + '<b>Serviço:</b> ' + l.tipo_servico + '<br>'
-    + '<b>Total:</b> <span style="color:var(--amarelo);font-size:16px;font-weight:700">R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>'
-    + historicoHtml;
-
+  document.getElementById('mpag-resumo').innerHTML = `
+    <b>Pedido:</b> ${l.numero_pedido}<br>
+    <b>Cliente:</b> ${l.cliente_nome}<br>
+    <b>Funcionário:</b> ${l.funcionario_nome}<br>
+    <b>Serviço:</b> ${l.tipo_servico}<br>
+    <b>Total:</b> <span style="color:var(--amarelo);font-size:16px;font-weight:700">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+    ${historicoHtml}
+  `;
   abrirModal('modal-pagar');
 }
 
 function atualizarSaldoPagar() {
-  const total        = parseFloat(document.getElementById('mpag-valor-total').value)||0;
+  const total = parseFloat(document.getElementById('mpag-valor-total').value)||0;
   const pagoAnterior = parseFloat(document.getElementById('mpag-valor-pago-anterior').value)||0;
-  const totalAdiant  = parseFloat(document.getElementById('mpag-valor-adiantado').value)||0;
-  const saldoReal    = Math.max(0, total - pagoAnterior - totalAdiant);
-  const valorAgora   = parseFloat(document.getElementById('mpag-valor').value)||0;
-  const preview      = document.getElementById('mpag-preview');
+  const saldo = total - pagoAnterior;
+  const valorAgora = parseFloat(document.getElementById('mpag-valor').value)||0;
+  const novoSaldo = saldo - valorAgora;
+  const preview = document.getElementById('mpag-preview');
   const previewTexto = document.getElementById('mpag-preview-texto');
-
-  if (valorAgora < 0) { preview.style.display='none'; return; }
-
-  const saldoAposEste = Math.max(0, saldoReal - valorAgora);
+  if (valorAgora <= 0) { preview.style.display='none'; return; }
   preview.style.display = 'block';
-
-  if (valorAgora === 0 && totalAdiant >= (total - pagoAnterior - 0.01)) {
-    previewTexto.innerHTML = '<span style="color:#58d68d">✅ Adiantamento integral — lançamento será marcado como <strong>Pago</strong></span>';
-  } else if (valorAgora >= saldoReal - 0.01) {
-    previewTexto.innerHTML = '<span style="color:#58d68d">✅ Pagamento total — lançamento será marcado como <strong>Pago</strong>'
-      + (valorAgora > saldoReal + 0.01 ? ' (valor ajustado ao saldo)' : '') + '</span>';
+  if (valorAgora >= saldo) {
+    previewTexto.innerHTML = '<span style="color:#58d68d">✅ Pagamento total — lançamento será marcado como <strong>Pago</strong></span>';
   } else {
-    previewTexto.innerHTML = '<span style="color:var(--amarelo)">⚡ Pagamento parcial — saldo restante: <strong>R$ '
-      + saldoAposEste.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</strong></span>';
+    previewTexto.innerHTML = `<span style="color:var(--amarelo)">⚡ Pagamento parcial — saldo restante: <strong>R$ ${novoSaldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></span>`;
   }
 }
 
 async function confirmarPagamento() {
-  const id           = document.getElementById('mpag-id').value;
-  const total        = parseFloat(document.getElementById('mpag-valor-total').value)||0;
+  const id = document.getElementById('mpag-id').value;
+  const total = parseFloat(document.getElementById('mpag-valor-total').value)||0;
   const pagoAnterior = parseFloat(document.getElementById('mpag-valor-pago-anterior').value)||0;
-  const totalAdiant  = parseFloat(document.getElementById('mpag-valor-adiantado').value)||0;
-  const saldoReal    = Math.max(0, total - pagoAnterior - totalAdiant);
-  const valorAgora   = parseFloat(document.getElementById('mpag-valor').value)||0;
-  const dtPag        = document.getElementById('mpag-data').value;
-  const forma        = document.getElementById('mpag-forma').value;
-  const obs          = document.getElementById('mpag-obs').value;
+  const saldo = total - pagoAnterior;
+  const valorAgora = parseFloat(document.getElementById('mpag-valor').value)||0;
+  const dtPag = document.getElementById('mpag-data').value;
+  const forma = document.getElementById('mpag-forma').value;
+  const obs = document.getElementById('mpag-obs').value;
 
-  // Aceitar valor zero SOMENTE se adiantamento cobre o saldo restante
-  const adiantamentoCobre = totalAdiant >= (total - pagoAnterior - 0.01);
-  if (valorAgora < 0) { toast('Valor inválido.','error'); return; }
-  if (valorAgora === 0 && !adiantamentoCobre) { toast('Informe o valor pago ou registre um adiantamento antes.','error'); return; }
+  if (!valorAgora || valorAgora <= 0) { toast('Informe o valor pago.','error'); return; }
+  if (valorAgora > saldo + 0.01) { toast('Valor maior que o saldo a pagar (R$ ' + saldo.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ').','error'); return; }
 
-  // Valor efetivo a registrar como parcela (respeita o saldo real, sem exceder)
-  const valorEfetivo = Math.min(valorAgora, saldoReal);
-  const novoPago     = pagoAnterior + valorEfetivo + totalAdiant;
-  const isPagoTotal  = novoPago >= total - 0.01 || adiantamentoCobre;
-  const novoStatus   = isPagoTotal ? 'pago' : 'parcial';
+  const novoPago = pagoAnterior + valorAgora;
+  const isPagoTotal = novoPago >= total - 0.01;
+  const novoStatus = isPagoTotal ? 'pago' : 'parcial';
 
   fecharModal('modal-pagar');
-  toast(isPagoTotal ? 'Pagamento total registrado! ✅' : 'Parcela de R$ ' + valorEfetivo.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' registrada! ⚡');
+  toast(isPagoTotal ? 'Pagamento total registrado! ✅' : `Parcela de R$ ${valorAgora.toLocaleString('pt-BR',{minimumFractionDigits:2})} registrada! ⚡`);
   invalidarCacheLanc();
 
-  // Registrar parcela apenas se houver valor a registrar
-  if (valorEfetivo > 0) {
-    try {
-      const rParcela = await fetch(`${SUPABASE_URL}/rest/v1/pagamentos_parciais`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ lancamento_id: id, valor: valorEfetivo, data_pagamento: dtPag, forma: forma, obs: obs })
-      });
-      if (!rParcela.ok) { const err = await rParcela.text(); console.warn('Parcela erro:', err); }
-    } catch(e) { console.warn('pagamentos_parciais exception:', e.message); }
-  }
+  try {
+    const rParcela = await fetch(`${SUPABASE_URL}/rest/v1/pagamentos_parciais`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ lancamento_id: id, valor: valorAgora, data_pagamento: dtPag, forma: forma, obs: obs })
+    });
+    if (!rParcela.ok) {
+      const errTxt = await rParcela.text();
+      console.warn('Erro ao inserir parcela:', errTxt);
+      toast('Erro ao salvar parcela: ' + errTxt, 'error');
+    }
+  } catch(e) { console.warn('pagamentos_parciais exception:', e.message); toast('Erro de conexão ao salvar parcela.', 'error'); }
 
-  // valor_pago = parcelas pagas (sem contar adiantamento — adiantamento é campo separado)
   const payload = {
     pagamento_status: novoStatus,
-    valor_pago: pagoAnterior + valorEfetivo,
+    valor_pago: novoPago,
     data_pagamento: dtPag,
     forma_pagamento: forma,
-    obs_pagamento: obs || (adiantamentoCobre && valorEfetivo === 0 ? 'Coberto por adiantamento' : obs)
+    obs_pagamento: obs
   };
 
   if (isPagoTotal) {
     const trPag = document.querySelector('#tb-pagamentos tr[data-id="' + id + '"]');
-    if (trPag) { trPag.style.transition='opacity 0.4s'; trPag.style.opacity='0'; setTimeout(function(){ if(trPag.parentNode) trPag.parentNode.removeChild(trPag); }, 400); }
+    if (trPag) {
+      trPag.style.transition = 'opacity 0.4s';
+      trPag.style.opacity = '0';
+      setTimeout(function(){ if(trPag.parentNode) trPag.parentNode.removeChild(trPag); }, 400);
+    }
+    const tbPag = document.getElementById('tb-pagamentos');
+    if (tbPag && tbPag.querySelectorAll('tr[data-id]').length <= 1) {
+      setTimeout(function(){
+        if (tbPag.querySelectorAll('tr[data-id]').length === 0)
+          tbPag.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">&#128176;</div><p>Nenhum lan&ccedil;amento a pagar.</p></td></tr>';
+      }, 500);
+    }
     sbUpdate('lancamentos', id, payload)
-      .then(function() { invalidarCacheLanc(); toast('Redirecionando para Finalizados... ✅'); setTimeout(function(){ irPara('finalizados'); }, 1000); })
+      .then(function() {
+        invalidarCacheLanc();
+        toast('Pagamento total registrado! Redirecionando... &#9989;');
+        setTimeout(function(){ irPara('finalizados'); }, 1000);
+      })
       .catch(function(e) { toast('Erro ao atualizar: ' + e.message, 'error'); });
   } else {
     sbUpdate('lancamentos', id, payload)
@@ -2344,150 +2381,230 @@ async function editarLancDireto(id, voltarPara) {
 function imprimirRelatorio() { window.print(); }
 
 // =============================================
-// PERMISSÕES
+// PERMISSÕES — GESTÃO DE USUÁRIOS
 // =============================================
-function carregarPermissoes() {
-  const perfis = [
-    { perfil: 'gerente',    nome: 'Gerente',     tecnico: false },
-    { perfil: 'tecnico01',  nome: 'Técnico 01',  tecnico: true },
-    { perfil: 'tecnico02',  nome: 'Técnico 02',  tecnico: true },
-    { perfil: 'financeiro', nome: 'Financeiro',  tecnico: false }
-  ];
-  const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin);
-  const container = document.getElementById('perm-container');
 
-  // ── Tabela de usuários: login fixo (readonly), senha e vínculo editáveis ──
-  const linhasUsuarios = USUARIOS.filter(u => u.perfil !== 'admin').map(u => {
-    const temColab = u.colaborador !== undefined;
-    return '<tr>'
-      + '<td style="padding:10px 12px;font-size:13px;color:#EEE"><strong>' + u.nome + '</strong><br><span style="font-size:11px;color:#555">' + u.perfil + '</span></td>'
-      + '<td style="padding:8px 10px">'
-        + '<input value="' + u.user + '" readonly '
-        + 'style="width:100%;padding:7px 10px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:5px;color:#666;font-size:13px;cursor:not-allowed" />'
-      + '</td>'
-      + '<td style="padding:8px 10px">'
-        + '<input id="upd-senha-' + u.perfil + '" type="text" value="' + u.senha + '" '
-        + 'style="width:100%;padding:7px 10px;background:#222;border:1px solid #444;border-radius:5px;color:#EEE;font-size:13px" />'
-      + '</td>'
-      + '<td style="padding:8px 10px">'
-        + (temColab
-          ? '<input id="upd-colab-' + u.perfil + '" value="' + (u.colaborador||'') + '" placeholder="Nome exato do colaborador..." '
-            + 'style="width:100%;padding:7px 10px;background:#222;border:1px solid #444;border-radius:5px;color:#EEE;font-size:13px" />'
-          : '<span style="color:#444;font-size:12px">—</span>')
-      + '</td>'
-      + '<td style="padding:8px 10px;white-space:nowrap">'
-        + '<button class="btn btn-primary btn-sm" onclick="salvarUsuario(\'' + u.perfil + '\')">💾 Salvar</button>'
-      + '</td>'
-      + '</tr>';
-  }).join('');
-
-  // ── Permissões por perfil ──
-  const permsHtml = perfis.map(p => {
-    const perms = getPermissoes(p.perfil);
-    const checkboxes = telas.map(t =>
-      '<label class="perm-check ' + (perms.includes(t.id) ? 'checked' : '') + '" id="lbl-' + p.perfil + '-' + t.id + '">'
-      + '<input type="checkbox" ' + (perms.includes(t.id) ? 'checked' : '')
-      + ' onchange="togglePerm(\'' + p.perfil + '\',\'' + t.id + '\',this.checked)"'
-      + ' style="accent-color:var(--amarelo);width:16px;height:16px;cursor:pointer" />'
-      + t.label + '</label>'
-    ).join('');
-
-    // Vínculo de colaborador para técnicos
-    const vinculoHtml = p.tecnico ? (() => {
-      const usuario = USUARIOS.find(u => u.perfil === p.perfil);
-      const vinculoAtual = localStorage.getItem('tw_colab_' + p.perfil) || (usuario ? usuario.colaborador || '' : '');
-      return '<div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px;margin-bottom:16px">'
-        + '<div style="font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase;margin-bottom:8px">🔗 Vínculo com Colaborador</div>'
-        + '<div style="display:flex;gap:10px;align-items:center">'
-        + '<input id="vinculo-' + p.perfil + '" value="' + vinculoAtual + '" placeholder="Nome exato do colaborador..." '
-        + 'style="flex:1;padding:9px 13px;background:#222;border:1px solid #444;border-radius:6px;color:#EEE;font-size:13px" />'
-        + '<button class="btn btn-primary btn-sm" onclick="salvarVinculo(\'' + p.perfil + '\')">Salvar</button>'
-        + '</div>'
-        + '<div style="font-size:11px;color:#666;margin-top:6px">⚠️ Digite exatamente como aparece no cadastro de colaboradores</div>'
-        + '</div>';
-    })() : '';
-
-    return '<div class="card" style="margin-bottom:16px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
-      + '<h3 style="margin:0">👤 ' + p.nome + '</h3>'
-      + '<div style="display:flex;gap:8px">'
-      + '<button class="btn btn-ghost btn-sm" onclick="marcarTodos(\'' + p.perfil + '\',true)">✅ Todas</button>'
-      + '<button class="btn btn-ghost btn-sm" onclick="marcarTodos(\'' + p.perfil + '\',false)">❌ Nenhuma</button>'
-      + '<button class="btn btn-ghost btn-sm" onclick="restaurarPadrao(\'' + p.perfil + '\')">↩️ Padrão</button>'
-      + '</div></div>'
-      + vinculoHtml
-      + '<div class="perm-grid" id="perm-grid-' + p.perfil + '">' + checkboxes + '</div>'
-      + '</div>';
-  }).join('');
-
-  container.innerHTML =
-    '<div class="card" style="margin-bottom:20px">'
-    + '<h3 style="margin-bottom:6px">🔑 Senhas dos Usuários</h3>'
-    + '<p style="color:#666;font-size:12px;margin-bottom:14px">Login gerado automaticamente — apenas senha e vínculo são editáveis.</p>'
-    + '<div style="overflow-x:auto">'
-    + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-    + '<thead><tr style="border-bottom:2px solid var(--amarelo)">'
-    + '<th style="padding:8px 12px;text-align:left;font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase;white-space:nowrap">Usuário</th>'
-    + '<th style="padding:8px 12px;text-align:left;font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase">Login (fixo)</th>'
-    + '<th style="padding:8px 12px;text-align:left;font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase">Senha</th>'
-    + '<th style="padding:8px 12px;text-align:left;font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase">Vínculo (colaborador)</th>'
-    + '<th></th></tr></thead>'
-    + '<tbody>' + linhasUsuarios + '</tbody>'
-    + '</table></div>'
-    + '<div style="margin-top:10px;padding:10px 14px;background:#1a1a1a;border-radius:6px;font-size:12px;color:#666">'
-    + '⚠️ O vínculo deve ser o nome <strong style="color:#888">exatamente igual</strong> ao cadastrado em Colaboradores para filtrar as obras corretamente.'
-    + '</div></div>'
-    + permsHtml;
+// Perfil único gerado a partir do login
+function gerarPerfil(login) {
+  return 'u_' + login.toLowerCase().replace(/[^a-z0-9]/g, '_');
 }
 
-function salvarUsuario(perfil) {
+// Abrir modal de novo usuário (também serve para editar)
+async function abrirModalNovoUsuario(perfil) {
+  // Carregar lista de colaboradores para o select
+  const sel = document.getElementById('mnu-colab');
+  sel.innerHTML = '<option value="">— Nenhum (acesso geral) —</option>';
+  try {
+    const colabs = await sbGet('colaboradores', 'order=nome.asc&ativo=neq.Não');
+    colabs.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.nome; opt.textContent = c.nome;
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+
+  if (perfil) {
+    // Modo edição
+    const u = USUARIOS.find(x => x.perfil === perfil);
+    if (!u) return;
+    document.getElementById('mnu-titulo').textContent = '✏️ Editar Usuário — ' + u.nome;
+    document.getElementById('mnu-perfil-original').value = perfil;
+    document.getElementById('mnu-nome').value = u.nome;
+    document.getElementById('mnu-login').value = u.user;
+    document.getElementById('mnu-login').readOnly = true;
+    document.getElementById('mnu-login').style.cssText += ';background:#1a1a1a;color:#666;cursor:not-allowed';
+    document.getElementById('mnu-senha').value = u.senha;
+    sel.value = u.colaborador || '';
+  } else {
+    // Modo criação
+    document.getElementById('mnu-titulo').textContent = '➕ Novo Usuário';
+    document.getElementById('mnu-perfil-original').value = '';
+    document.getElementById('mnu-nome').value = '';
+    document.getElementById('mnu-login').value = '';
+    document.getElementById('mnu-login').readOnly = false;
+    document.getElementById('mnu-login').style.cssText = document.getElementById('mnu-login').style.cssText.replace(/background[^;]+;|color[^;]+;|cursor[^;]+;/g,'');
+    document.getElementById('mnu-login').style.background = '#222';
+    document.getElementById('mnu-login').style.color = '#EEE';
+    document.getElementById('mnu-login').style.cursor = 'text';
+    document.getElementById('mnu-senha').value = '';
+    sel.value = '';
+  }
+  abrirModal('modal-novo-usuario');
+}
+
+function salvarNovoUsuario() {
+  const perfilOriginal = document.getElementById('mnu-perfil-original').value;
+  const nome   = document.getElementById('mnu-nome').value.trim();
+  const login  = document.getElementById('mnu-login').value.trim().toLowerCase();
+  const senha  = document.getElementById('mnu-senha').value.trim();
+  const colab  = document.getElementById('mnu-colab').value;
+
+  if (!nome || !login || !senha) { toast('Preencha nome, login e senha.','error'); return; }
+
+  if (perfilOriginal) {
+    // Editar usuário existente
+    const u = USUARIOS.find(x => x.perfil === perfilOriginal);
+    if (!u) return;
+    u.nome  = nome;
+    u.senha = senha;
+    u.colaborador = colab || null;
+    localStorage.setItem('tw_udata_' + perfilOriginal, JSON.stringify({ senha, colab: colab || null }));
+    _persistirExtras();
+    fecharModal('modal-novo-usuario');
+    toast('Usuário "' + nome + '" atualizado! ✅');
+    carregarPermissoes();
+    return;
+  }
+
+  // Novo usuário — verificar login duplicado
+  if (USUARIOS.find(x => x.user === login)) { toast('Login "' + login + '" já está em uso.','error'); return; }
+
+  const perfil = gerarPerfil(login);
+  const novoUser = { user: login, senha, nome, perfil, colaborador: colab || null };
+  USUARIOS.push(novoUser);
+  _persistirExtras();
+  fecharModal('modal-novo-usuario');
+  toast('Usuário "' + nome + '" criado! Login: ' + login,'success');
+  carregarPermissoes();
+}
+
+function excluirUsuario(perfil) {
   const u = USUARIOS.find(x => x.perfil === perfil);
   if (!u) return;
-  const novaSenha = (document.getElementById('upd-senha-' + perfil)||{}).value || '';
-  const colabEl   = document.getElementById('upd-colab-' + perfil);
-  const novoColab = colabEl ? colabEl.value.trim() : null;
-  if (!novaSenha) { toast('A senha não pode ficar em branco.','error'); return; }
-  u.senha = novaSenha;
-  if (novoColab !== null) u.colaborador = novoColab || null;
-  // Persistir no localStorage para sobreviver ao reload
-  localStorage.setItem('tw_udata_' + perfil, JSON.stringify({ senha: novaSenha, colab: novoColab }));
-  toast('Usuário "' + u.nome + '" atualizado! ✅','success');
+  // Perfis base não podem ser excluídos
+  const BASE = ['admin','gerente','tecnico01','tecnico02','financeiro'];
+  if (BASE.includes(perfil)) { toast('Usuários base não podem ser excluídos.','error'); return; }
+  if (!confirm('Excluir o usuário "' + u.nome + '"? Esta ação não pode ser desfeita.')) return;
+  const idx = USUARIOS.indexOf(u);
+  if (idx > -1) USUARIOS.splice(idx, 1);
+  localStorage.removeItem('tw_udata_' + perfil);
+  localStorage.removeItem('tw_perms_' + perfil);
+  _persistirExtras();
+  toast('Usuário removido.','info');
+  carregarPermissoes();
 }
 
-// Restaurar dados de usuários salvos pelo admin ao iniciar
-(function() {
-  USUARIOS.forEach(function(u) {
-    var salvo = localStorage.getItem('tw_udata_' + u.perfil);
-    if (salvo) {
-      try {
-        var d = JSON.parse(salvo);
-        if (d.senha) u.senha = d.senha;
-        if (d.colab !== undefined) u.colaborador = d.colab || null;
-      } catch(e) {}
-    }
-  });
-})();
+function _persistirExtras() {
+  // Salvar apenas usuários não-base
+  const BASE = ['admin','gerente','tecnico01','tecnico02','financeiro'];
+  const extras = USUARIOS.filter(u => !BASE.includes(u.perfil));
+  localStorage.setItem('tw_usuarios_extras', JSON.stringify(extras));
+}
+
+// Abrir modal de permissões individuais
+function abrirPermIndividual(perfil) {
+  const u = USUARIOS.find(x => x.perfil === perfil);
+  if (!u) return;
+  window._permPerfilAtivo = perfil;
+  document.getElementById('mperm-titulo').textContent = '🔐 Permissões — ' + u.nome;
+
+  const perms = getPermissoes(perfil);
+  const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin);
+  document.getElementById('mperm-body').innerHTML =
+    '<div class="perm-grid" style="margin-top:4px">'
+    + telas.map(t =>
+        '<label class="perm-check ' + (perms.includes(t.id) ? 'checked' : '') + '" id="mperm-lbl-' + t.id + '">'
+        + '<input type="checkbox" ' + (perms.includes(t.id) ? 'checked' : '')
+        + ' onchange="togglePermModal(\'' + t.id + '\',this.checked)"'
+        + ' style="accent-color:var(--amarelo);width:16px;height:16px;cursor:pointer" />'
+        + t.label + '</label>'
+      ).join('')
+    + '</div>';
+  abrirModal('modal-perm-individual');
+}
+
+function togglePermModal(tela, ativo) {
+  const perfil = window._permPerfilAtivo;
+  if (!perfil) return;
+  const perms = getPermissoes(perfil);
+  const novas = ativo ? [...new Set([...perms, tela])] : perms.filter(t => t !== tela);
+  salvarPermissoes(perfil, novas);
+  const lbl = document.getElementById('mperm-lbl-' + tela);
+  if (lbl) lbl.classList.toggle('checked', ativo);
+  // Atualizar sidebar se for o usuário logado
+  if (usuarioLogado && usuarioLogado.perfil === perfil) aplicarPermissoesSidebar();
+}
+
+function marcarTodosModal(ativo) {
+  const perfil = window._permPerfilAtivo;
+  if (!perfil) return;
+  const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin).map(t => t.id);
+  salvarPermissoes(perfil, ativo ? telas : []);
+  abrirPermIndividual(perfil);
+}
+
+function restaurarPadraoModal() {
+  const perfil = window._permPerfilAtivo;
+  if (!perfil) return;
+  localStorage.removeItem('tw_perms_' + perfil);
+  abrirPermIndividual(perfil);
+  toast('Permissões restauradas.','info');
+}
+
+function carregarPermissoes() {
+  const container = document.getElementById('perm-container');
+  const usuariosVisiveis = USUARIOS.filter(u => u.perfil !== 'admin');
+  const BASE = ['admin','gerente','tecnico01','tecnico02','financeiro'];
+
+  container.innerHTML = usuariosVisiveis.map(u => {
+    const perms    = getPermissoes(u.perfil);
+    const isBase   = BASE.includes(u.perfil);
+    const colabTag = u.colaborador
+      ? '<span style="background:rgba(41,128,185,0.2);color:#5dade2;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:600">👤 ' + u.colaborador + '</span>'
+      : '<span style="color:#444;font-size:12px">sem vínculo</span>';
+    const permsResumo = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin && perms.includes(t.id)).map(t => t.label).join(' · ') || '—';
+
+    return '<div class="card" style="margin-bottom:12px;padding:18px 20px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">'
+        // Lado esquerdo: info do usuário
+        + '<div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0">'
+          + '<div style="background:#252525;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👤</div>'
+          + '<div style="min-width:0">'
+            + '<div style="font-size:15px;font-weight:700;color:#EEE">' + u.nome + '</div>'
+            + '<div style="font-size:12px;color:#666;margin-top:1px">Login: <strong style="color:#888">' + u.user + '</strong>'
+            + ' &nbsp;·&nbsp; ' + colabTag + '</div>'
+            + '<div style="font-size:11px;color:#444;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + permsResumo + '</div>'
+          + '</div>'
+        + '</div>'
+        // Lado direito: ações
+        + '<div style="display:flex;gap:8px;flex-shrink:0">'
+          + '<button class="btn btn-ghost btn-sm" onclick="abrirPermIndividual(\'' + u.perfil + '\')" title="Editar permissões">🔐 Permissões</button>'
+          + '<button class="btn btn-ghost btn-sm" onclick="abrirModalNovoUsuario(\'' + u.perfil + '\')" title="Editar dados">✏️ Editar</button>'
+          + (!isBase ? '<button class="btn btn-danger btn-sm" onclick="excluirUsuario(\'' + u.perfil + '\')" title="Excluir usuário">🗑️</button>' : '')
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+function salvarVinculo(perfil) {
+  // Legado — mantido para compatibilidade
+  const val = document.getElementById('vinculo-' + perfil);
+  if (!val) return;
+  localStorage.setItem('tw_colab_' + perfil, val.value.trim());
+  const u = USUARIOS.find(x => x.perfil === perfil);
+  if (u) u.colaborador = val.value.trim() || null;
+  toast('Vínculo salvo.','success');
+}
 
 function togglePerm(perfil, tela, ativo) {
   const perms = getPermissoes(perfil);
   const novas = ativo ? [...new Set([...perms, tela])] : perms.filter(t => t !== tela);
   salvarPermissoes(perfil, novas);
-  const lbl = document.getElementById(`lbl-${perfil}-${tela}`);
+  const lbl = document.getElementById('lbl-' + perfil + '-' + tela);
   if (lbl) lbl.classList.toggle('checked', ativo);
-  toast(`Permissão ${ativo ? 'concedida' : 'removida'}: ${tela}`, ativo ? 'success' : 'info');
 }
 
 function marcarTodos(perfil, ativo) {
   const telas = TELAS_DISPONIVEIS.filter(t => !t.apenasAdmin).map(t => t.id);
   salvarPermissoes(perfil, ativo ? telas : []);
   carregarPermissoes();
-  toast(ativo ? 'Todas as permissões concedidas.' : 'Todas as permissões removidas.', 'info');
 }
 
 function restaurarPadrao(perfil) {
   localStorage.removeItem('tw_perms_' + perfil);
   carregarPermissoes();
-  toast('Permissões restauradas para o padrão.', 'info');
+  toast('Permissões restauradas.', 'info');
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el => {
