@@ -250,6 +250,42 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
 .leadtime.warn { background:rgba(243,156,18,0.15); color:#f8c471; }
 .leadtime.late { background:rgba(231,76,60,0.15);  color:#f1948a; }
 
+/* ===== CALENDÁRIO ===== */
+.cal-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+.cal-nav { display:flex; align-items:center; gap:14px; }
+.cal-nav .btn { padding:6px 14px; font-size:16px; line-height:1; }
+.cal-titulo { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:700; letter-spacing:1px; color:var(--amarelo); min-width:190px; text-align:center; text-transform:capitalize; }
+.cal-legenda { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; font-size:11px; color:#999; }
+.cal-legenda span { display:flex; align-items:center; gap:6px; }
+.cal-dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+.cal-dot.andamento  { background:#5dade2; }
+.cal-dot.retocar    { background:#f8c471; }
+.cal-dot.acabamento { background:#bb8fce; }
+.cal-grid-head { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:6px; }
+.cal-grid-head div { text-align:center; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--texto-claro); font-weight:600; padding:4px 0; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:minmax(92px,auto); gap:6px; }
+.cal-day { background:#212121; border:1px solid #2e2e2e; border-radius:8px; padding:6px 7px; overflow:hidden; transition:border-color .15s; }
+.cal-day:hover { border-color:#444; }
+.cal-day.outro-mes { opacity:.35; }
+.cal-day.hoje { border-color:var(--amarelo); box-shadow:inset 0 0 0 1px rgba(245,166,35,0.35); }
+.cal-day-num { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; color:#999; margin-bottom:5px; }
+.cal-day.hoje .cal-day-num { color:var(--amarelo); }
+.cal-day-eventos { display:flex; flex-direction:column; gap:3px; }
+.cal-evento { font-size:10px; padding:3px 6px; border-radius:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; font-weight:600; }
+.cal-evento.andamento  { background:rgba(41,128,185,0.2); color:#5dade2; }
+.cal-evento.retocar    { background:rgba(243,156,18,0.2); color:#f8c471; }
+.cal-evento.acabamento { background:rgba(142,68,173,0.2); color:#bb8fce; }
+.cal-evento:hover { filter:brightness(1.25); }
+.cal-mais { font-size:10px; color:#777; padding:1px 6px; cursor:pointer; }
+.cal-day[onclick] { cursor:pointer; }
+.cal-dia-item { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#222; border:1px solid #333; border-radius:8px; padding:12px 14px; margin-bottom:10px; }
+.cal-dia-item-pedido { font-size:13px; font-weight:600; color:#EEE; }
+.cal-dia-item-sub { font-size:11px; color:#888; margin-top:2px; }
+@media (max-width:900px) {
+  .cal-grid { grid-auto-rows:minmax(70px,auto); }
+  .cal-evento { font-size:9px; }
+}
+
 /* ===== RECIBO ===== */
 .recibo-doc {
   background:#fff; color:#111; border-radius:10px; padding:50px;
@@ -364,6 +400,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
     <div class="nav-group">
       <div class="nav-label">Operações</div>
       <div class="nav-item" data-tela="lancamentos" onclick="irPara('lancamentos')"><span class="icon">📋</span> Lançamentos</div>
+      <div class="nav-item" data-tela="calendario" onclick="irPara('calendario')"><span class="icon">🗓️</span> Calendário</div>
       <div class="nav-item" data-tela="pagamentos" onclick="irPara('pagamentos')"><span class="icon">💰</span> A Pagar</div>
       <div class="nav-item" data-tela="finalizados" onclick="irPara('finalizados')"><span class="icon">✅</span> Pago / Finalizado</div>
       <div class="nav-item" data-tela="recibo" onclick="irPara('recibo')"><span class="icon">🧾</span> Recibo</div>
@@ -534,6 +571,30 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
             <tbody id="tb-lancamentos"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- CALENDÁRIO -->
+    <div class="tela" id="t-calendario">
+      <div class="page-header"><h2>🗓️ Calendário</h2><p>Lançamentos organizados pela data de início · obras concluídas saem automaticamente</p></div>
+      <div class="card">
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="btn btn-ghost btn-sm" onclick="calMudarMes(-1)" title="Mês anterior">‹</button>
+            <div class="cal-titulo" id="cal-titulo">—</div>
+            <button class="btn btn-ghost btn-sm" onclick="calMudarMes(1)" title="Próximo mês">›</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="calHoje()">Hoje</button>
+        </div>
+        <div class="cal-legenda">
+          <span><i class="cal-dot andamento"></i> Em andamento</span>
+          <span><i class="cal-dot retocar"></i> Falta retocar</span>
+          <span><i class="cal-dot acabamento"></i> Falta acabamento</span>
+        </div>
+        <div class="cal-grid-head">
+          <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
       </div>
     </div>
 
@@ -809,6 +870,18 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-lanc')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarLanc()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Dia do Calendário -->
+<div class="modal-overlay" id="modal-cal-dia">
+  <div class="modal">
+    <button class="modal-close" onclick="fecharModal('modal-cal-dia')" title="Fechar">✕</button>
+    <h3 id="cal-dia-titulo">Data</h3>
+    <div id="cal-dia-lista"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-cal-dia')">Fechar</button>
     </div>
   </div>
 </div>
@@ -1096,6 +1169,7 @@ const TELAS_DISPONIVEIS = [
   { id: 'produtos',      label: '🏗️ Produtos' },
   { id: 'situacoes',     label: '🏷️ Situações de Obra' },
   { id: 'lancamentos',   label: '📋 Lançamentos' },
+  { id: 'calendario',    label: '🗓️ Calendário' },
   { id: 'pagamentos',    label: '💰 A Pagar' },
   { id: 'finalizados',   label: '✅ Pago / Finalizado' },
   { id: 'recibo',        label: '🧾 Recibo' },
@@ -1104,10 +1178,10 @@ const TELAS_DISPONIVEIS = [
 
 // PERMISSÕES PADRÃO POR PERFIL
 const PERMISSOES_PADRAO = {
-  admin:      ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','pagamentos','finalizados','recibo','permissoes'],
-  gerente:    ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','pagamentos','finalizados','recibo'],
-  tecnico01:  ['lancamentos'],
-  tecnico02:  ['lancamentos'],
+  admin:      ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo','permissoes'],
+  gerente:    ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo'],
+  tecnico01:  ['lancamentos','calendario'],
+  tecnico02:  ['lancamentos','calendario'],
   financeiro: ['dashboard','pagamentos','finalizados','recibo']
 };
 
@@ -1213,6 +1287,7 @@ function irPara(tela) {
     'produtos': carregarProdutos,
     'situacoes': carregarSituacoes,
     'lancamentos': carregarLancamentos,
+    'calendario': carregarCalendario,
     'pagamentos': carregarPagamentos,
     'finalizados': carregarFinalizados,
     'recibo': carregarRecibo,
@@ -2951,6 +3026,133 @@ async function concluirLanc(lancId) {
   } catch(e) {
     toast('Erro ao concluir: ' + e.message, 'error');
   }
+}
+
+// =============================================
+// CALENDÁRIO
+// =============================================
+var _calData = new Date(); _calData.setDate(1);
+var _calEventosCache = [];
+var _calIsTecnico = false;
+const CAL_CLASSE_SIT = { 'Em andamento':'andamento', 'Falta retocar':'retocar', 'Falta acabamento':'acabamento' };
+
+async function carregarCalendario() {
+  try {
+    var todos = await getLancamentos();
+    _calIsTecnico = !!(usuarioLogado && usuarioLogado.colaborador);
+    if (_calIsTecnico) {
+      todos = todos.filter(function(l){ return (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim(); });
+    }
+    // Somente obras com data de início definida e que ainda não foram concluídas
+    _calEventosCache = todos.filter(function(l){ return (l.situacao||'Em andamento') !== 'Conclu\u00eddo' && l.data_inicio; });
+  } catch(e) {
+    toast('Erro ao carregar calendário: ' + e.message, 'error');
+    _calEventosCache = [];
+  }
+  renderCalendario();
+}
+
+function calMudarMes(delta) {
+  _calData.setMonth(_calData.getMonth() + delta);
+  renderCalendario();
+}
+
+function calHoje() {
+  _calData = new Date(); _calData.setDate(1);
+  renderCalendario();
+}
+
+function renderCalendario() {
+  var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var ano = _calData.getFullYear(), mes = _calData.getMonth();
+  var tituloEl = document.getElementById('cal-titulo');
+  if (tituloEl) tituloEl.textContent = meses[mes] + ' de ' + ano;
+
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+  var hojeStr = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-' + String(hoje.getDate()).padStart(2,'0');
+
+  // Agrupa eventos por data (YYYY-MM-DD)
+  var porDia = {};
+  _calEventosCache.forEach(function(l) {
+    var d = l.data_inicio;
+    if (!porDia[d]) porDia[d] = [];
+    porDia[d].push(l);
+  });
+
+  var primeiroDia = new Date(ano, mes, 1);
+  var ultimoDia = new Date(ano, mes + 1, 0);
+  var inicioGrid = new Date(primeiroDia);
+  inicioGrid.setDate(inicioGrid.getDate() - primeiroDia.getDay());
+  var fimGrid = new Date(ultimoDia);
+  fimGrid.setDate(fimGrid.getDate() + (6 - ultimoDia.getDay()));
+
+  var html = '';
+  var cursor = new Date(inicioGrid);
+  while (cursor <= fimGrid) {
+    var ds = cursor.getFullYear() + '-' + String(cursor.getMonth()+1).padStart(2,'0') + '-' + String(cursor.getDate()).padStart(2,'0');
+    var outroMes = cursor.getMonth() !== mes;
+    var isHoje = ds === hojeStr;
+    var eventos = porDia[ds] || [];
+
+    var evHtml = eventos.slice(0, 3).map(function(l) {
+      var c = CAL_CLASSE_SIT[l.situacao] || 'andamento';
+      var label = (l.numero_pedido||'-') + ' · ' + (l.cliente_nome||'-');
+      var labelSeguro = label.replace(/"/g,'&quot;');
+      return '<div class="cal-evento ' + c + '" title="' + labelSeguro + '" onclick="event.stopPropagation();abrirLancDoCalendario(\'' + l.id + '\')">' + labelSeguro + '</div>';
+    }).join('');
+
+    var maisHtml = eventos.length > 3
+      ? '<div class="cal-mais" onclick="event.stopPropagation();abrirDiaCalendario(\'' + ds + '\')">+' + (eventos.length - 3) + ' obra(s)</div>'
+      : '';
+
+    html += '<div class="cal-day' + (outroMes ? ' outro-mes' : '') + (isHoje ? ' hoje' : '') + '"'
+      + (eventos.length ? ' onclick="abrirDiaCalendario(\'' + ds + '\')"' : '') + '>'
+      + '<div class="cal-day-num">' + cursor.getDate() + '</div>'
+      + '<div class="cal-day-eventos">' + evHtml + maisHtml + '</div>'
+      + '</div>';
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  var gridEl = document.getElementById('cal-grid');
+  if (gridEl) gridEl.innerHTML = html;
+}
+
+function abrirDiaCalendario(dataStr) {
+  var eventos = _calEventosCache.filter(function(l){ return l.data_inicio === dataStr; });
+  var dt = new Date(dataStr + 'T12:00:00');
+  var dataFmt = dt.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  document.getElementById('cal-dia-titulo').textContent = dataFmt.charAt(0).toUpperCase() + dataFmt.slice(1);
+  document.getElementById('cal-dia-lista').innerHTML = eventos.map(function(l) {
+    var btnConcluir = !_calIsTecnico
+      ? '<button class="btn btn-sm" onclick="calConcluirLanc(\'' + l.id + '\')" title="Marcar como Concluído" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#58d68d;padding:5px 8px">✅</button>'
+      : '';
+    return '<div class="cal-dia-item">'
+      + '<div>'
+      + '<div class="cal-dia-item-pedido">' + (l.numero_pedido||'-') + ' · ' + (l.cliente_nome||'-') + '</div>'
+      + '<div class="cal-dia-item-sub">' + (l.funcionario_nome||'-') + ' · ' + (l.tipo_servico||'-') + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + badgeSit(l.situacao||'Em andamento')
+      + '<button class="btn btn-ghost btn-sm" onclick="fecharModal(\'modal-cal-dia\');editarLanc(\'' + l.id + '\')" title="Editar">✏️</button>'
+      + btnConcluir
+      + '</div>'
+      + '</div>';
+  }).join('') || '<div class="empty-state"><p>Nenhuma obra nesta data.</p></div>';
+
+  abrirModal('modal-cal-dia');
+}
+
+function abrirLancDoCalendario(id) {
+  editarLanc(id);
+}
+
+async function calConcluirLanc(id) {
+  fecharModal('modal-cal-dia');
+  await concluirLanc(id);
+  _calEventosCache = _calEventosCache.filter(function(l){ return l.id !== id; });
+  renderCalendario();
 }
 
 // =============================================
