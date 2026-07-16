@@ -3062,6 +3062,27 @@ function calHoje() {
   renderCalendario();
 }
 
+function calDatasDoLanc(l) {
+  // Retorna a lista de datas (YYYY-MM-DD) entre data_inicio e data_fim (inclusive).
+  // Se não houver data_fim, retorna apenas a data_inicio.
+  var datas = [];
+  if (!l || !l.data_inicio) return datas;
+  var fimStr = l.data_fim || l.data_inicio;
+  var cursor = new Date(l.data_inicio + 'T12:00:00');
+  var fimDt = new Date(fimStr + 'T12:00:00');
+  if (isNaN(cursor.getTime())) return datas;
+  if (isNaN(fimDt.getTime()) || fimDt < cursor) fimDt = cursor;
+  // Limite de segurança para evitar loops enormes por dados inconsistentes
+  var maxDias = 730;
+  var i = 0;
+  while (cursor <= fimDt && i < maxDias) {
+    datas.push(cursor.getFullYear() + '-' + String(cursor.getMonth()+1).padStart(2,'0') + '-' + String(cursor.getDate()).padStart(2,'0'));
+    cursor.setDate(cursor.getDate() + 1);
+    i++;
+  }
+  return datas;
+}
+
 function renderCalendario() {
   var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   var ano = _calData.getFullYear(), mes = _calData.getMonth();
@@ -3074,9 +3095,10 @@ function renderCalendario() {
   // Agrupa eventos por data (YYYY-MM-DD)
   var porDia = {};
   _calEventosCache.forEach(function(l) {
-    var d = l.data_inicio;
-    if (!porDia[d]) porDia[d] = [];
-    porDia[d].push(l);
+    calDatasDoLanc(l).forEach(function(d) {
+      if (!porDia[d]) porDia[d] = [];
+      porDia[d].push(l);
+    });
   });
 
   var primeiroDia = new Date(ano, mes, 1);
@@ -3119,7 +3141,7 @@ function renderCalendario() {
 }
 
 function abrirDiaCalendario(dataStr) {
-  var eventos = _calEventosCache.filter(function(l){ return l.data_inicio === dataStr; });
+  var eventos = _calEventosCache.filter(function(l){ return calDatasDoLanc(l).indexOf(dataStr) !== -1; });
   var dt = new Date(dataStr + 'T12:00:00');
   var dataFmt = dt.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
 
