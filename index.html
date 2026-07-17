@@ -550,18 +550,50 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
     <!-- LANÇAMENTOS -->
     <div class="tela" id="t-lancamentos">
       <div class="page-header"><h2>📋 Lançamentos</h2><p>Registro de obras e serviços</p></div>
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <div class="field" style="min-width:180px">
-            <select id="filtro-lanc-sit" onchange="carregarLancamentos()">
-              <option value="">Todas as situações</option>
-              <option value="Em andamento">Em andamento</option>
-              <option value="Falta retocar">Falta retocar</option>
-              <option value="Falta acabamento">Falta acabamento</option>
-              <option value="Concluído">Concluído</option>
-            </select>
-          </div>
+      <div class="filtros">
+        <div class="field"><label>Situação</label>
+          <select id="filtro-lanc-sit" onchange="carregarLancamentos()">
+            <option value="">Todas</option>
+            <option value="Em andamento">Em andamento</option>
+            <option value="Falta retocar">Falta retocar</option>
+            <option value="Falta acabamento">Falta acabamento</option>
+            <option value="Concluído">Concluído</option>
+          </select>
         </div>
+        <div class="field" id="lanc-filtro-func"><label>Funcionário</label>
+          <select id="filtro-lanc-func" onchange="carregarLancamentos()"><option value="">Todos</option></select>
+        </div>
+        <div class="field"><label>Cliente</label>
+          <select id="filtro-lanc-cli" onchange="carregarLancamentos()"><option value="">Todos</option></select>
+        </div>
+        <div class="field"><label>Nº Pedido</label>
+          <input type="text" id="filtro-lanc-pedido" placeholder="Buscar pedido..." oninput="carregarLancamentos()">
+        </div>
+        <div class="field"><label>Início (de)</label>
+          <input type="date" id="filtro-lanc-data-de" onchange="carregarLancamentos()">
+        </div>
+        <div class="field"><label>Início (até)</label>
+          <input type="date" id="filtro-lanc-data-ate" onchange="carregarLancamentos()">
+        </div>
+        <div class="field"><label>Mês</label>
+          <select id="filtro-lanc-mes" onchange="carregarLancamentos()">
+            <option value="">Todos</option>
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+            <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+            <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+        </div>
+        <div class="field"><label>Ano</label>
+          <select id="filtro-lanc-ano" onchange="carregarLancamentos()">
+            <option value="">Todos</option>
+            <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="limparFiltrosLanc()" title="Limpar filtros">✕ Limpar</button>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left"></div>
         <button class="btn btn-primary" onclick="abrirModalLanc()">+ Novo Lançamento</button>
       </div>
       <div class="card">
@@ -585,6 +617,18 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
             <button class="btn btn-ghost btn-sm" onclick="calMudarMes(1)" title="Próximo mês">›</button>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="calHoje()">Hoje</button>
+        </div>
+        <div class="filtros" style="margin-bottom:14px">
+          <div class="field" id="cal-filtro-func-wrap"><label>Funcionário</label>
+            <select id="cal-filtro-func" onchange="aplicarFiltrosCalendario()"><option value="">Todos</option></select>
+          </div>
+          <div class="field"><label>Cliente</label>
+            <select id="cal-filtro-cli" onchange="aplicarFiltrosCalendario()"><option value="">Todos</option></select>
+          </div>
+          <div class="field"><label>Nº Pedido</label>
+            <input type="text" id="cal-filtro-pedido" placeholder="Buscar pedido..." oninput="aplicarFiltrosCalendario()">
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="limparFiltrosCalendario()" title="Limpar filtros">✕ Limpar</button>
         </div>
         <div class="cal-legenda">
           <span><i class="cal-dot andamento"></i> Em andamento</span>
@@ -1204,6 +1248,7 @@ function temPermissao(tela) {
 let usuarioLogado = null;
 let telaAtual = 'dashboard';
 let _cacheColabs = null;
+let _cacheClientes = null;
 let _cacheLancamentos = null;
 let _chartMensal = null;
 let _cacheLancTimestamp = 0;
@@ -1495,6 +1540,7 @@ async function salvarCliente() {
     endereco: document.getElementById('mcl-endereco').value.trim()
   };
   fecharModal('modal-cliente');
+  _cacheClientes = null;
   const tb = document.getElementById('tb-clientes');
   const cidadeStr = dados.cidade + (dados.estado ? ' / ' + dados.estado : '');
   if (id) {
@@ -1690,14 +1736,47 @@ async function carregarLancamentos() {
   var filtro = document.getElementById('filtro-lanc-sit').value;
   var tb = document.getElementById('tb-lancamentos');
   pararTodosCronos();
+
+  var isTecnico = usuarioLogado && usuarioLogado.colaborador;
+  var filtroFuncEl = document.getElementById('lanc-filtro-func');
+  if (filtroFuncEl) filtroFuncEl.style.display = isTecnico ? 'none' : '';
+  if (!isTecnico) {
+    await preencherFiltroFuncs('filtro-lanc-func');
+    await preencherFiltroClientes('filtro-lanc-cli');
+  }
+
   try {
     var params = 'order=criado_em.desc';
     if (filtro) params += '&situacao=eq.' + encodeURIComponent(filtro);
     var docs = await sbGet('lancamentos', params);
 
-    var isTecnico = usuarioLogado && usuarioLogado.colaborador;
     if (isTecnico) {
       docs = docs.filter(function(l){ return (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim(); });
+    }
+
+    // Filtros adicionais: funcionário, cliente, nº pedido, período de início, mês e ano
+    var fFunc = !isTecnico ? document.getElementById('filtro-lanc-func').value : '';
+    var fCli = !isTecnico ? document.getElementById('filtro-lanc-cli').value : '';
+    var fPedido = (document.getElementById('filtro-lanc-pedido').value || '').trim().toLowerCase();
+    var fDataDe = document.getElementById('filtro-lanc-data-de').value;
+    var fDataAte = document.getElementById('filtro-lanc-data-ate').value;
+    var fMes = document.getElementById('filtro-lanc-mes').value;
+    var fAno = document.getElementById('filtro-lanc-ano').value;
+
+    if (fFunc) docs = docs.filter(function(l){ return l.funcionario_id === fFunc; });
+    if (fCli) docs = docs.filter(function(l){ return l.cliente_id === fCli; });
+    if (fPedido) docs = docs.filter(function(l){ return (l.numero_pedido||'').toString().toLowerCase().indexOf(fPedido) !== -1; });
+    if (fDataDe) docs = docs.filter(function(l){ return l.data_inicio && l.data_inicio >= fDataDe; });
+    if (fDataAte) docs = docs.filter(function(l){ return l.data_inicio && l.data_inicio <= fDataAte; });
+    if (fMes || fAno) {
+      docs = docs.filter(function(l){
+        if (!l.data_inicio) return false;
+        var partes = l.data_inicio.split('-');
+        var y = partes[0], m = partes[1];
+        if (fMes && m !== fMes.padStart(2,'0')) return false;
+        if (fAno && y !== fAno) return false;
+        return true;
+      });
     }
 
     if (!docs.length) { tb.innerHTML = '<tr><td colspan="14" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>'; return; }
@@ -2434,6 +2513,7 @@ function atualizarGraficoFunc() {
 // =============================================
 async function preencherFiltroFuncs(elId) {
   const el = document.getElementById(elId);
+  if (!el) return;
   if (el.options.length > 1) return;
   if (!_cacheColabs) {
     _cacheColabs = (await sbGet('colaboradores', 'order=nome.asc&select=id,nome')).map(c => ({ id: c.id, nome: c.nome }));
@@ -2445,10 +2525,38 @@ async function preencherFiltroFuncs(elId) {
   });
 }
 
+async function preencherFiltroClientes(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (el.options.length > 1) return;
+  if (!_cacheClientes) {
+    _cacheClientes = (await sbGet('clientes', 'order=nome.asc&select=id,nome')).map(c => ({ id: c.id, nome: c.nome }));
+  }
+  _cacheClientes.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.nome;
+    el.appendChild(opt);
+  });
+}
+
+function limparFiltrosLanc() {
+  document.getElementById('filtro-lanc-sit').value = '';
+  document.getElementById('filtro-lanc-func').value = '';
+  document.getElementById('filtro-lanc-cli').value = '';
+  document.getElementById('filtro-lanc-pedido').value = '';
+  document.getElementById('filtro-lanc-data-de').value = '';
+  document.getElementById('filtro-lanc-data-ate').value = '';
+  document.getElementById('filtro-lanc-mes').value = '';
+  document.getElementById('filtro-lanc-ano').value = '';
+  carregarLancamentos();
+}
+
 async function excluirDoc(tabela, id, callback) {
   if (!confirm('Confirmar exclusão?')) return;
   if (id.startsWith('tmp_')) { toast('Aguarde a sincronização finalizar.','error'); return; }
   await sbDelete(tabela, id);
+  if (tabela === 'clientes') _cacheClientes = null;
+  if (tabela === 'colaboradores') _cacheColabs = null;
   toast('Excluído com sucesso.','info');
   callback();
 }
@@ -3032,24 +3140,57 @@ async function concluirLanc(lancId) {
 // CALENDÁRIO
 // =============================================
 var _calData = new Date(); _calData.setDate(1);
+var _calEventosTodos = [];
 var _calEventosCache = [];
 var _calIsTecnico = false;
 const CAL_CLASSE_SIT = { 'Em andamento':'andamento', 'Falta retocar':'retocar', 'Falta acabamento':'acabamento' };
 
 async function carregarCalendario() {
+  _calIsTecnico = !!(usuarioLogado && usuarioLogado.colaborador);
+  var wrapFunc = document.getElementById('cal-filtro-func-wrap');
+  if (wrapFunc) wrapFunc.style.display = _calIsTecnico ? 'none' : '';
+  if (!_calIsTecnico) {
+    await preencherFiltroFuncs('cal-filtro-func');
+    await preencherFiltroClientes('cal-filtro-cli');
+  }
+
   try {
     var todos = await getLancamentos();
-    _calIsTecnico = !!(usuarioLogado && usuarioLogado.colaborador);
     if (_calIsTecnico) {
       todos = todos.filter(function(l){ return (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim(); });
     }
     // Somente obras com data de início definida e que ainda não foram concluídas
-    _calEventosCache = todos.filter(function(l){ return (l.situacao||'Em andamento') !== 'Conclu\u00eddo' && l.data_inicio; });
+    _calEventosTodos = todos.filter(function(l){ return (l.situacao||'Em andamento') !== 'Conclu\u00eddo' && l.data_inicio; });
   } catch(e) {
     toast('Erro ao carregar calendário: ' + e.message, 'error');
-    _calEventosCache = [];
+    _calEventosTodos = [];
   }
+  aplicarFiltrosCalendario();
+}
+
+function aplicarFiltrosCalendario() {
+  var fFunc = !_calIsTecnico && document.getElementById('cal-filtro-func') ? document.getElementById('cal-filtro-func').value : '';
+  var fCli = !_calIsTecnico && document.getElementById('cal-filtro-cli') ? document.getElementById('cal-filtro-cli').value : '';
+  var pedidoEl = document.getElementById('cal-filtro-pedido');
+  var fPedido = pedidoEl ? pedidoEl.value.trim().toLowerCase() : '';
+
+  var lista = _calEventosTodos;
+  if (fFunc) lista = lista.filter(function(l){ return l.funcionario_id === fFunc; });
+  if (fCli) lista = lista.filter(function(l){ return l.cliente_id === fCli; });
+  if (fPedido) lista = lista.filter(function(l){ return (l.numero_pedido||'').toString().toLowerCase().indexOf(fPedido) !== -1; });
+
+  _calEventosCache = lista;
   renderCalendario();
+}
+
+function limparFiltrosCalendario() {
+  var elFunc = document.getElementById('cal-filtro-func');
+  var elCli = document.getElementById('cal-filtro-cli');
+  var elPedido = document.getElementById('cal-filtro-pedido');
+  if (elFunc) elFunc.value = '';
+  if (elCli) elCli.value = '';
+  if (elPedido) elPedido.value = '';
+  aplicarFiltrosCalendario();
 }
 
 function calMudarMes(delta) {
@@ -3173,6 +3314,7 @@ function abrirLancDoCalendario(id) {
 async function calConcluirLanc(id) {
   fecharModal('modal-cal-dia');
   await concluirLanc(id);
+  _calEventosTodos = _calEventosTodos.filter(function(l){ return l.id !== id; });
   _calEventosCache = _calEventosCache.filter(function(l){ return l.id !== id; });
   renderCalendario();
 }
