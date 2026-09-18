@@ -190,6 +190,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .modal-close:hover { background:#333; color:#EEE; }
 .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; border-top:1px solid #333; padding-top:18px; }
 
+/* Chips de funcionários (vários por obra) */
+.chips-func { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.chips-func:empty { display:none; }
+.chip-func {
+  display:inline-flex; align-items:center; gap:6px; background:#333;
+  border:1px solid var(--borda); color:#EEE; border-radius:14px;
+  padding:4px 6px 4px 10px; font-size:12px; line-height:1.4;
+}
+.chip-func.principal { border-color:var(--amarelo); color:var(--amarelo); }
+.chip-func button {
+  background:none; border:none; color:#999; cursor:pointer;
+  font-size:13px; line-height:1; padding:0 3px; border-radius:3px;
+}
+.chip-func button:hover { color:var(--perigo); background:rgba(231,76,60,0.15); }
+
 /* Toast */
 .toast {
   position:fixed; bottom:30px; right:30px; padding:14px 22px; border-radius:8px;
@@ -879,8 +894,9 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
       <div class="field"><label>Cliente*</label>
         <select id="ml-cliente"><option value="">Selecione...</option></select>
       </div>
-      <div class="field"><label>Funcionário*</label>
-        <select id="ml-func"><option value="">Selecione...</option></select>
+      <div class="field"><label>Funcionário(s)*</label>
+        <select id="ml-func" onchange="addFuncLanc(this.value)"><option value="">Selecione...</option></select>
+        <div class="chips-func" id="ml-func-chips"></div>
       </div>
     </div>
     <div class="form-row cols-3">
@@ -1751,7 +1767,7 @@ async function carregarLancamentos() {
     var docs = await sbGet('lancamentos', params);
 
     if (isTecnico) {
-      docs = docs.filter(function(l){ return (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim(); });
+      docs = docs.filter(function(l){ return lancTemFuncNome(l, usuarioLogado.colaborador); });
     }
 
     // Filtros adicionais: funcionário, cliente, nº pedido, período de início, mês e ano
@@ -1763,7 +1779,7 @@ async function carregarLancamentos() {
     var fMes = document.getElementById('filtro-lanc-mes').value;
     var fAno = document.getElementById('filtro-lanc-ano').value;
 
-    if (fFunc) docs = docs.filter(function(l){ return l.funcionario_id === fFunc; });
+    if (fFunc) docs = docs.filter(function(l){ return lancTemFuncId(l, fFunc); });
     if (fCli) docs = docs.filter(function(l){ return l.cliente_id === fCli; });
     if (fPedido) docs = docs.filter(function(l){ return (l.numero_pedido||'').toString().toLowerCase().indexOf(fPedido) !== -1; });
     if (fDataDe) docs = docs.filter(function(l){ return l.data_inicio && l.data_inicio >= fDataDe; });
@@ -1869,7 +1885,62 @@ async function carregarLancamentos() {
 }
 
 
+// ---------------------------------------------
+// MÚLTIPLOS FUNCIONÁRIOS POR OBRA
+// ---------------------------------------------
+let lancFuncs = []; // [{ id, nome }] — o primeiro é o responsável principal
+
+function nomesFuncLanc(l) {
+  return (l.funcionario_nome || '').split(/\s*[,;]\s*/).map(s => s.trim()).filter(Boolean);
+}
+function nomeColabPorId(id) {
+  const c = (_cacheColabs || []).find(x => x.id === id);
+  return c ? c.nome : '';
+}
+function lancTemFuncNome(l, nome) {
+  if (!nome) return false;
+  const alvo = nome.trim().toLowerCase();
+  return nomesFuncLanc(l).some(n => n.toLowerCase() === alvo);
+}
+function lancTemFuncId(l, funcId) {
+  if (!funcId) return true;
+  if (l.funcionario_id === funcId) return true;
+  return lancTemFuncNome(l, nomeColabPorId(funcId));
+}
+
+function renderFuncChips() {
+  const box = document.getElementById('ml-func-chips');
+  if (!box) return;
+  box.innerHTML = lancFuncs.map((f, i) =>
+    '<span class="chip-func' + (i === 0 ? ' principal' : '') + '" title="' +
+    (i === 0 ? 'Responsável principal' : 'Funcionário da obra') + '">' +
+    (i === 0 ? '⭐ ' : '') + f.nome +
+    ' <button type="button" onclick="removerFuncLanc(\'' + f.id + '\')" title="Remover">✕</button></span>'
+  ).join('');
+}
+
+function addFuncLanc(id) {
+  const sel = document.getElementById('ml-func');
+  if (!id) return;
+  if (lancFuncs.some(f => f.id === id)) {
+    toast('Funcionário já adicionado nesta obra.', 'info');
+    sel.value = '';
+    return;
+  }
+  const nome = sel.options[sel.selectedIndex].text;
+  lancFuncs.push({ id: id, nome: nome });
+  sel.value = '';
+  renderFuncChips();
+}
+
+function removerFuncLanc(id) {
+  lancFuncs = lancFuncs.filter(f => f.id !== id);
+  renderFuncChips();
+}
+
 async function abrirModalLanc() {
+  lancFuncs = [];
+  renderFuncChips();
   ['ml-id','ml-pedido','ml-tipo','ml-obs'].forEach(f => document.getElementById(f).value='');
   ['ml-inicio','ml-fim'].forEach(f => document.getElementById(f).value='');
   document.getElementById('ml-sit').value = 'Em andamento';
@@ -1892,7 +1963,18 @@ async function editarLanc(id) {
   await preencherSelectProdutos('ml-produto');
   document.getElementById('ml-id').value = id;
   document.getElementById('ml-cliente').value = l.cliente_id||'';
-  document.getElementById('ml-func').value = l.funcionario_id||'';
+  // Reconstrói a lista de funcionários da obra
+  lancFuncs = [];
+  const optsFunc = Array.from(document.getElementById('ml-func').options);
+  nomesFuncLanc(l).forEach(function(nm, i) {
+    const opt = optsFunc.find(function(o){ return o.value && o.text.trim().toLowerCase() === nm.toLowerCase(); });
+    lancFuncs.push({ id: opt ? opt.value : (i === 0 ? (l.funcionario_id || 'n-' + i) : 'n-' + i), nome: nm });
+  });
+  if (!lancFuncs.length && l.funcionario_id) {
+    lancFuncs.push({ id: l.funcionario_id, nome: nomeColabPorId(l.funcionario_id) || 'Funcionário' });
+  }
+  renderFuncChips();
+  document.getElementById('ml-func').value = '';
   document.getElementById('ml-pedido').value = l.numero_pedido||'';
   document.getElementById('ml-inicio').value = l.data_inicio||'';
   document.getElementById('ml-fim').value = l.data_fim||'';
@@ -1943,12 +2025,15 @@ function calcTotal() {
 
 async function salvarLanc() {
   const clienteId = document.getElementById('ml-cliente').value;
-  const funcId = document.getElementById('ml-func').value;
+  // Caso o usuário tenha escolhido no select sem clicar em nada mais, aproveita a seleção pendente
+  const pendente = document.getElementById('ml-func').value;
+  if (pendente) addFuncLanc(pendente);
+  const funcId = lancFuncs.length ? lancFuncs[0].id : '';
   const pedido = document.getElementById('ml-pedido').value.trim();
   const tipo = document.getElementById('ml-tipo').value.trim();
   if (!clienteId || !funcId || !pedido || !tipo) { toast('Preencha os campos obrigatórios.','error'); return; }
   const clienteNome = document.getElementById('ml-cliente').options[document.getElementById('ml-cliente').selectedIndex].text;
-  const funcionarioNome = document.getElementById('ml-func').options[document.getElementById('ml-func').selectedIndex].text;
+  const funcionarioNome = lancFuncs.map(f => f.nome).join(', ');
   const qtd = parseFloat(document.getElementById('ml-qtd').value)||0;
   const vunit = parseFloat(document.getElementById('ml-vunit').value)||0;
   const sit = document.getElementById('ml-sit').value;
@@ -2058,7 +2143,7 @@ async function carregarPagamentos() {
   const ano = document.getElementById('f-pag-ano').value;
   const func = document.getElementById('f-pag-func').value;
   let rows = todos.filter(l => l.situacao === 'Concluído' && (l.pagamento_status === 'concluido' || l.pagamento_status === 'parcial'));
-  if (func) rows = rows.filter(l => l.funcionario_id === func);
+  if (func) rows = rows.filter(l => lancTemFuncId(l, func));
   if (mes || ano) {
     rows = rows.filter(l => {
       const dt = l.data_fim || '';
@@ -2271,7 +2356,7 @@ async function carregarFinalizados() {
   const ano = document.getElementById('f-fin-ano').value;
   const func = document.getElementById('f-fin-func').value;
   let rows = todos.filter(l => l.pagamento_status === 'pago');
-  if (func) rows = rows.filter(l => l.funcionario_id === func);
+  if (func) rows = rows.filter(l => lancTemFuncId(l, func));
   if (mes||ano) {
     rows = rows.filter(l => {
       const dt = l.data_pagamento||'';
@@ -2359,7 +2444,7 @@ async function carregarDashboard() {
 
   // Base: técnico vê apenas os seus; admin/gerente veem todos
   let base = eTecnico
-    ? todos_raw.filter(l => (l.funcionario_nome||'').trim().toLowerCase() === nomeColab)
+    ? todos_raw.filter(l => lancTemFuncNome(l, nomeColab))
     : [...todos_raw];
 
   // Filtro de período
@@ -2385,7 +2470,7 @@ async function carregarDashboard() {
   document.getElementById('d-conc').textContent   = concluidos.length;
 
   // Filtro adicional por funcionário específico (admin/gerente)
-  let filtrado = (!eTecnico && funcFiltro) ? todos.filter(l => l.funcionario_id === funcFiltro) : todos;
+  let filtrado = (!eTecnico && funcFiltro) ? todos.filter(l => lancTemFuncId(l, funcFiltro)) : todos;
 
   // Gráfico
   renderGraficos(base, eTecnico ? nomeColab : null);
@@ -2456,7 +2541,7 @@ function renderGraficos(todos, colabFixo) {
       sel.innerHTML = '<option value="' + colabFixo + '">' + (usuarioLogado.colaborador||colabFixo) + '</option>';
       sel.value = colabFixo;
     } else if (sel.options.length <= 1) {
-      const funcsUnicos = [...new Set(todos.map(l => l.funcionario_nome).filter(Boolean))].sort();
+      const funcsUnicos = [...new Set(todos.flatMap(l => nomesFuncLanc(l)))].sort();
       funcsUnicos.forEach(fn => {
         const opt = document.createElement('option');
         opt.value = fn; opt.textContent = fn;
@@ -2475,7 +2560,7 @@ function atualizarGraficoFunc() {
   const funcEscolhido = _graficoColabFixo || sel.value;
   const anoEscolhido  = anoSel.value;
   const base = funcEscolhido
-    ? _todosParaGrafico.filter(l => (l.funcionario_nome||'').trim().toLowerCase() === funcEscolhido.trim().toLowerCase())
+    ? _todosParaGrafico.filter(l => lancTemFuncNome(l, funcEscolhido))
     : _todosParaGrafico;
   const dadosPago = [], dadosAPagar = [];
   for (let m = 1; m <= 12; m++) {
@@ -2783,9 +2868,16 @@ function restaurarPadrao(perfil) {
   toast('Permissões restauradas.','info');
 }
 
+// Modais só fecham pelos botões (✕ / Cancelar / Fechar).
+// Clique fora e tecla ESC são bloqueados em todo o sistema.
 document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+  el.addEventListener('click', e => { if (e.target === el) e.stopPropagation(); });
 });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.querySelector('.modal-overlay.open')) {
+    e.preventDefault(); e.stopPropagation();
+  }
+}, true);
 
 document.querySelectorAll('#dash-ano, #f-pag-ano, #f-fin-ano').forEach(el => {
   el.value = new Date().getFullYear().toString();
@@ -3157,7 +3249,7 @@ async function carregarCalendario() {
   try {
     var todos = await getLancamentos();
     if (_calIsTecnico) {
-      todos = todos.filter(function(l){ return (l.funcionario_nome||'').trim() === usuarioLogado.colaborador.trim(); });
+      todos = todos.filter(function(l){ return lancTemFuncNome(l, usuarioLogado.colaborador); });
     }
     // Somente obras com data de início definida e que ainda não foram concluídas
     _calEventosTodos = todos.filter(function(l){ return (l.situacao||'Em andamento') !== 'Conclu\u00eddo' && l.data_inicio; });
@@ -3175,7 +3267,7 @@ function aplicarFiltrosCalendario() {
   var fPedido = pedidoEl ? pedidoEl.value.trim().toLowerCase() : '';
 
   var lista = _calEventosTodos;
-  if (fFunc) lista = lista.filter(function(l){ return l.funcionario_id === fFunc; });
+  if (fFunc) lista = lista.filter(function(l){ return lancTemFuncId(l, fFunc); });
   if (fCli) lista = lista.filter(function(l){ return l.cliente_id === fCli; });
   if (fPedido) lista = lista.filter(function(l){ return (l.numero_pedido||'').toString().toLowerCase().indexOf(fPedido) !== -1; });
 
