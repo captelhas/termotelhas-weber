@@ -190,20 +190,30 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .modal-close:hover { background:#333; color:#EEE; }
 .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; border-top:1px solid #333; padding-top:18px; }
 
-/* Chips de funcionários (vários por obra) */
-.chips-func { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-.chips-func:empty { display:none; }
-.chip-func {
-  display:inline-flex; align-items:center; gap:6px; background:#333;
-  border:1px solid var(--borda); color:#EEE; border-radius:14px;
-  padding:4px 6px 4px 10px; font-size:12px; line-height:1.4;
+/* Lançamentos por funcionário dentro da ordem */
+.ml-equipe { border:1px solid var(--borda); border-radius:10px; padding:14px; margin-bottom:15px; background:#262626; }
+.ml-equipe-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.ml-equipe-head .mlt { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--amarelo); font-weight:700; }
+.linha-func { display:grid; grid-template-columns:1.3fr 1.5fr .8fr .6fr .9fr 1fr 34px; gap:8px; align-items:center; margin-bottom:8px; }
+.linha-func-head { margin-bottom:6px; }
+.linha-func-head span { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--texto-claro); }
+.linha-func input, .linha-func select {
+  width:100%; padding:8px 10px; background:#222; border:1px solid var(--borda);
+  border-radius:6px; color:#EEE; font-size:13px; font-family:inherit;
 }
-.chip-func.principal { border-color:var(--amarelo); color:var(--amarelo); }
-.chip-func button {
-  background:none; border:none; color:#999; cursor:pointer;
-  font-size:13px; line-height:1; padding:0 3px; border-radius:3px;
+.linha-func input:focus, .linha-func select:focus { outline:none; border-color:var(--amarelo); }
+.linha-func select option { background:#222; }
+.linha-func .lf-total { font-size:13px; font-weight:700; color:var(--amarelo); text-align:right; padding-right:4px; white-space:nowrap; }
+.linha-func .lf-del { background:none; border:1px solid var(--borda); color:#999; border-radius:6px; cursor:pointer; padding:8px 0; font-size:13px; }
+.linha-func .lf-del:hover { color:var(--perigo); border-color:var(--perigo); }
+.ml-resumo { border-top:1px solid var(--borda); margin-top:12px; padding-top:10px; font-size:13px; }
+.ml-resumo .mr-item { display:flex; justify-content:space-between; gap:12px; padding:3px 0; color:#CCC; }
+.ml-resumo .mr-total { display:flex; justify-content:space-between; gap:12px; padding-top:8px; margin-top:6px; border-top:1px dashed #444; font-weight:700; color:var(--amarelo); font-size:15px; }
+@media (max-width:820px) {
+  .linha-func { grid-template-columns:1fr 1fr; }
+  .linha-func-head { display:none; }
+  .linha-func .lf-total { text-align:left; }
 }
-.chip-func button:hover { color:var(--perigo); background:rgba(231,76,60,0.15); }
 
 /* Toast */
 .toast {
@@ -886,26 +896,15 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
 
 <!-- Modal Lançamento -->
 <div class="modal-overlay" id="modal-lanc">
-  <div class="modal" style="max-width:780px">
+  <div class="modal" style="max-width:920px">
     <button class="modal-close" onclick="fecharModal('modal-lanc')" title="Fechar">✕</button>
     <h3 id="ml-titulo">Novo Lançamento</h3>
     <input type="hidden" id="ml-id" />
-    <div class="form-row cols-2">
+    <div class="form-row cols-3">
       <div class="field"><label>Cliente*</label>
         <select id="ml-cliente"><option value="">Selecione...</option></select>
       </div>
-      <div class="field"><label>Funcionário(s)*</label>
-        <select id="ml-func" onchange="addFuncLanc(this.value)"><option value="">Selecione...</option></select>
-        <div class="chips-func" id="ml-func-chips"></div>
-      </div>
-    </div>
-    <div class="form-row cols-3">
       <div class="field"><label>Nº Pedido*</label><input id="ml-pedido" /></div>
-      <div class="field"><label>Data Início</label><input type="date" id="ml-inicio" /></div>
-      <div class="field"><label>Data Fim</label><input type="date" id="ml-fim" /></div>
-    </div>
-    <div class="form-row cols-2">
-      <div class="field"><label>Tipo do Serviço*</label><input id="ml-tipo" placeholder="Ex: Instalação de telha sanduíche" /></div>
       <div class="field"><label>Situação*</label>
         <select id="ml-sit">
           <option value="Em andamento">Em andamento</option>
@@ -915,16 +914,28 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
         </select>
       </div>
     </div>
-    <div class="form-row cols-4">
-      <div class="field"><label>Produto</label>
-        <select id="ml-produto" onchange="preencherProduto()"><option value="">Selecione...</option></select>
+    <div class="form-row cols-3">
+      <div class="field"><label>Data Início</label><input type="date" id="ml-inicio" /></div>
+      <div class="field"><label>Data Fim</label><input type="date" id="ml-fim" /></div>
+      <div class="field"><label>Produto (padrão da ordem)</label>
+        <select id="ml-produto" onchange="preencherProduto()"><option value="">Selecione produto...</option></select>
       </div>
-      <div class="field"><label>Quantidade*</label><input type="number" id="ml-qtd" step="0.01" min="0" oninput="calcTotal()" /></div>
-      <div class="field"><label>Unid. Medida</label><input id="ml-un" placeholder="m², un..." oninput="calcTotal()" /></div>
-      <div class="field"><label>Valor Unitário*</label><input type="number" id="ml-vunit" step="0.01" min="0" oninput="calcTotal()" /></div>
     </div>
-    <div class="form-row cols-2">
-      <div class="field"><label>Valor Total (automático)</label><input id="ml-vtotal" readonly /></div>
+
+    <div class="ml-equipe">
+      <div class="ml-equipe-head">
+        <span class="mlt">Lançamentos por funcionário</span>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addLinhaFunc()">+ Adicionar funcionário</button>
+      </div>
+      <div class="linha-func linha-func-head">
+        <span>Funcionário*</span><span>Tipo do serviço*</span><span>Qtd / Horas*</span>
+        <span>Unid.</span><span>Valor unit.*</span><span style="text-align:right">Total</span><span></span>
+      </div>
+      <div id="ml-linhas"></div>
+      <div class="ml-resumo" id="ml-resumo"></div>
+    </div>
+
+    <div class="form-row">
       <div class="field"><label>Observações</label><input id="ml-obs" /></div>
     </div>
     <div class="modal-footer">
@@ -1886,10 +1897,16 @@ async function carregarLancamentos() {
 
 
 // ---------------------------------------------
-// MÚLTIPLOS FUNCIONÁRIOS POR OBRA
+// LANÇAMENTOS POR FUNCIONÁRIO DENTRO DA ORDEM
+// Cada funcionário gera um registro próprio (horas, tipo e valor),
+// todos compartilhando o mesmo nº de pedido / cliente / produto.
 // ---------------------------------------------
-let lancFuncs = []; // [{ id, nome }] — o primeiro é o responsável principal
+let linhasFunc = [];        // linhas exibidas no modal
+let _grupoOriginal = [];     // ids já existentes no banco (modo edição)
+let _colabsLanc = [];        // cache de colaboradores do modal
+let _prodPadrao = { un:'', valor:'' };
 
+// Compatibilidade com registros antigos que gravaram vários nomes num campo só
 function nomesFuncLanc(l) {
   return (l.funcionario_nome || '').split(/\s*[,;]\s*/).map(s => s.trim()).filter(Boolean);
 }
@@ -1908,84 +1925,160 @@ function lancTemFuncId(l, funcId) {
   return lancTemFuncNome(l, nomeColabPorId(funcId));
 }
 
-function renderFuncChips() {
-  const box = document.getElementById('ml-func-chips');
-  if (!box) return;
-  box.innerHTML = lancFuncs.map((f, i) =>
-    '<span class="chip-func' + (i === 0 ? ' principal' : '') + '" title="' +
-    (i === 0 ? 'Responsável principal' : 'Funcionário da obra') + '">' +
-    (i === 0 ? '⭐ ' : '') + f.nome +
-    ' <button type="button" onclick="removerFuncLanc(\'' + f.id + '\')" title="Remover">✕</button></span>'
-  ).join('');
+function escAttr(v) {
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function fmtBRL(v) {
+  return 'R$ ' + (parseFloat(v)||0).toLocaleString('pt-BR',{ minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function nomeColabLanc(id) {
+  const c = _colabsLanc.find(x => x.id === id);
+  return c ? c.nome : '';
+}
+function totalLinha(l) {
+  return (parseFloat(l.qtd)||0) * (parseFloat(l.vunit)||0);
 }
 
-function addFuncLanc(id) {
-  const sel = document.getElementById('ml-func');
-  if (!id) return;
-  if (lancFuncs.some(f => f.id === id)) {
-    toast('Funcionário já adicionado nesta obra.', 'info');
-    sel.value = '';
+async function carregarColabsLanc() {
+  const docs = await sbGet('colaboradores', 'order=nome.asc&select=id,nome,ativo');
+  _colabsLanc = docs.map(c => ({ id:c.id, nome:c.nome, ativo:c.ativo }));
+}
+
+function optsColabsLinha(selId) {
+  return '<option value="">Selecione...</option>' + _colabsLanc
+    .filter(c => c.ativo !== 'Não' || c.id === selId)
+    .map(c => '<option value="' + c.id + '"' + (c.id === selId ? ' selected' : '') + '>'
+      + escAttr(c.nome) + (c.ativo === 'Não' ? ' (inativo)' : '') + '</option>').join('');
+}
+
+function addLinhaFunc(dados) {
+  const d = dados || {};
+  linhasFunc.push({
+    rid:   d.rid   || null,
+    funcId:d.funcId|| '',
+    tipo:  d.tipo  || '',
+    qtd:   (d.qtd   != null ? d.qtd   : ''),
+    un:    (d.un    != null && d.un !== '' ? d.un : _prodPadrao.un),
+    vunit: (d.vunit != null && d.vunit !== '' ? d.vunit : _prodPadrao.valor),
+    status:d.status|| 'ativo'
+  });
+  renderLinhasFunc();
+}
+
+function removerLinhaFunc(i) {
+  const l = linhasFunc[i];
+  if (!l) return;
+  if (l.rid && (l.status === 'pago' || l.status === 'parcial')) {
+    toast('Este funcionário já tem pagamento registrado e não pode ser removido.','error');
     return;
   }
-  const nome = sel.options[sel.selectedIndex].text;
-  lancFuncs.push({ id: id, nome: nome });
-  sel.value = '';
-  renderFuncChips();
+  if (l.rid && !confirm('Remover ' + (nomeColabLanc(l.funcId) || 'este funcionário') + ' da ordem? O lançamento dele será excluído ao salvar.')) return;
+  linhasFunc.splice(i,1);
+  if (!linhasFunc.length) addLinhaFunc();
+  else renderLinhasFunc();
 }
 
-function removerFuncLanc(id) {
-  lancFuncs = lancFuncs.filter(f => f.id !== id);
-  renderFuncChips();
+function setLinha(i, campo, valor) {
+  if (!linhasFunc[i]) return;
+  linhasFunc[i][campo] = valor;
+  atualizarTotaisFunc();
+}
+
+function renderLinhasFunc() {
+  const box = document.getElementById('ml-linhas');
+  if (!box) return;
+  box.innerHTML = linhasFunc.map(function(l, i) {
+    const travado = (l.status === 'pago' || l.status === 'parcial');
+    return '<div class="linha-func">'
+      + '<select onchange="setLinha(' + i + ',\'funcId\',this.value)">' + optsColabsLinha(l.funcId) + '</select>'
+      + '<input placeholder="Tipo do serviço" value="' + escAttr(l.tipo) + '" oninput="setLinha(' + i + ',\'tipo\',this.value)" />'
+      + '<input type="number" step="0.01" min="0" placeholder="Qtd / Horas" value="' + escAttr(l.qtd) + '" oninput="setLinha(' + i + ',\'qtd\',this.value)" />'
+      + '<input placeholder="Unid." value="' + escAttr(l.un) + '" oninput="setLinha(' + i + ',\'un\',this.value)" />'
+      + '<input type="number" step="0.01" min="0" placeholder="Valor unit." value="' + escAttr(l.vunit) + '" oninput="setLinha(' + i + ',\'vunit\',this.value)" />'
+      + '<span class="lf-total" id="lf-total-' + i + '">R$ 0,00</span>'
+      + '<button type="button" class="lf-del" onclick="removerLinhaFunc(' + i + ')" title="' + (travado ? 'Já pago — não pode remover' : 'Remover funcionário') + '">✕</button>'
+      + '</div>';
+  }).join('');
+  atualizarTotaisFunc();
+}
+
+function atualizarTotaisFunc() {
+  let soma = 0;
+  linhasFunc.forEach(function(l, i) {
+    const t = totalLinha(l);
+    soma += t;
+    const el = document.getElementById('lf-total-' + i);
+    if (el) el.textContent = fmtBRL(t);
+  });
+  const res = document.getElementById('ml-resumo');
+  if (!res) return;
+  const itens = linhasFunc.filter(l => l.funcId || totalLinha(l) > 0);
+  res.innerHTML = itens.map(function(l) {
+      return '<div class="mr-item"><span>' + escAttr(nomeColabLanc(l.funcId) || 'Funcionário')
+        + (l.tipo ? ' — ' + escAttr(l.tipo) : '')
+        + ((parseFloat(l.qtd)||0) ? ' <span style="color:#888">(' + escAttr(l.qtd) + ' ' + escAttr(l.un || 'un') + ')</span>' : '')
+        + '</span><span>' + fmtBRL(totalLinha(l)) + '</span></div>';
+    }).join('')
+    + '<div class="mr-total"><span>Total da ordem — ' + itens.length + ' funcionário' + (itens.length === 1 ? '' : 's')
+    + '</span><span>' + fmtBRL(soma) + '</span></div>';
 }
 
 async function abrirModalLanc() {
-  lancFuncs = [];
-  renderFuncChips();
-  ['ml-id','ml-pedido','ml-tipo','ml-obs'].forEach(f => document.getElementById(f).value='');
-  ['ml-inicio','ml-fim'].forEach(f => document.getElementById(f).value='');
+  ['ml-id','ml-pedido','ml-obs','ml-inicio','ml-fim'].forEach(f => document.getElementById(f).value = '');
   document.getElementById('ml-sit').value = 'Em andamento';
-  document.getElementById('ml-qtd').value = '';
-  document.getElementById('ml-vunit').value = '';
-  document.getElementById('ml-vtotal').value = '';
-  document.getElementById('ml-un').value = '';
   document.getElementById('ml-titulo').textContent = 'Novo Lançamento';
+  _prodPadrao = { un:'', valor:'' };
+  _grupoOriginal = [];
   await preencherSelectClientes('ml-cliente');
-  await preencherSelectColabs('ml-func');
   await preencherSelectProdutos('ml-produto');
+  await carregarColabsLanc();
+  document.getElementById('ml-produto').value = '';
+  linhasFunc = [];
+  addLinhaFunc();
   abrirModal('modal-lanc');
 }
 
 async function editarLanc(id) {
-  const docs = await sbGet('lancamentos', `id=eq.${id}`);
+  const docs = await sbGet('lancamentos', 'id=eq.' + id);
   const l = docs[0];
+  if (!l) { toast('Lançamento não encontrado.','error'); return; }
   await preencherSelectClientes('ml-cliente');
-  await preencherSelectColabs('ml-func');
   await preencherSelectProdutos('ml-produto');
+  await carregarColabsLanc();
+
+  // Carrega todos os funcionários da mesma ordem (mesmo nº de pedido e cliente)
+  let grupo = [l];
+  try {
+    let p = 'numero_pedido=eq.' + encodeURIComponent(l.numero_pedido || '');
+    if (l.cliente_id) p += '&cliente_id=eq.' + l.cliente_id;
+    p += '&order=criado_em.asc';
+    const irmaos = await sbGet('lancamentos', p);
+    if (irmaos && irmaos.length) grupo = irmaos;
+  } catch(e) { /* mantém apenas o registro atual */ }
+
+  _grupoOriginal = grupo.map(g => g.id);
+  _prodPadrao = { un:'', valor:'' };
   document.getElementById('ml-id').value = id;
-  document.getElementById('ml-cliente').value = l.cliente_id||'';
-  // Reconstrói a lista de funcionários da obra
-  lancFuncs = [];
-  const optsFunc = Array.from(document.getElementById('ml-func').options);
-  nomesFuncLanc(l).forEach(function(nm, i) {
-    const opt = optsFunc.find(function(o){ return o.value && o.text.trim().toLowerCase() === nm.toLowerCase(); });
-    lancFuncs.push({ id: opt ? opt.value : (i === 0 ? (l.funcionario_id || 'n-' + i) : 'n-' + i), nome: nm });
-  });
-  if (!lancFuncs.length && l.funcionario_id) {
-    lancFuncs.push({ id: l.funcionario_id, nome: nomeColabPorId(l.funcionario_id) || 'Funcionário' });
-  }
-  renderFuncChips();
-  document.getElementById('ml-func').value = '';
-  document.getElementById('ml-pedido').value = l.numero_pedido||'';
-  document.getElementById('ml-inicio').value = l.data_inicio||'';
-  document.getElementById('ml-fim').value = l.data_fim||'';
-  document.getElementById('ml-tipo').value = l.tipo_servico||'';
-  document.getElementById('ml-sit').value = l.situacao||'Em andamento';
-  document.getElementById('ml-qtd').value = l.quantidade||'';
-  document.getElementById('ml-un').value = l.unidade||'';
-  document.getElementById('ml-vunit').value = l.valor_unitario||'';
-  document.getElementById('ml-vtotal').value = 'R$ ' + parseFloat(l.valor_total||0).toFixed(2);
-  document.getElementById('ml-obs').value = l.observacoes||'';
-  document.getElementById('ml-titulo').textContent = 'Editar Lançamento';
+  document.getElementById('ml-cliente').value = l.cliente_id || '';
+  document.getElementById('ml-pedido').value = l.numero_pedido || '';
+  document.getElementById('ml-inicio').value = l.data_inicio || '';
+  document.getElementById('ml-fim').value = l.data_fim || '';
+  document.getElementById('ml-sit').value = l.situacao || 'Em andamento';
+  document.getElementById('ml-obs').value = l.observacoes || '';
+  document.getElementById('ml-produto').value = '';
+  document.getElementById('ml-titulo').textContent = 'Editar Ordem'
+    + (grupo.length > 1 ? ' — ' + grupo.length + ' funcionários' : '');
+
+  linhasFunc = grupo.map(g => ({
+    rid: g.id,
+    funcId: g.funcionario_id || '',
+    tipo: g.tipo_servico || '',
+    qtd: (g.quantidade != null ? g.quantidade : ''),
+    un: g.unidade || '',
+    vunit: (g.valor_unitario != null ? g.valor_unitario : ''),
+    status: g.pagamento_status || 'ativo'
+  }));
+  if (!linhasFunc.length) addLinhaFunc(); else renderLinhasFunc();
   abrirModal('modal-lanc');
 }
 
@@ -1998,6 +2091,7 @@ async function preencherSelectClientes(elId) {
 async function preencherSelectColabs(elId) {
   const docs = await sbGet('colaboradores', 'order=nome.asc&select=id,nome,ativo');
   const el = document.getElementById(elId);
+  if (!el) return;
   const ativos = docs.filter(d => d.ativo !== 'Não');
   el.innerHTML = '<option value="">Selecione...</option>' + ativos.map(d => `<option value="${d.id}">${d.nome}</option>`).join('');
 }
@@ -2008,126 +2102,88 @@ async function preencherSelectProdutos(elId) {
   el.innerHTML = '<option value="">Selecione produto...</option>' + docs.map(d => `<option value="${d.id}" data-un="${d.unidade}" data-val="${d.valor}">${d.nome}</option>`).join('');
 }
 
+// O produto é padrão da ordem: aplica unidade e valor unitário em todos os funcionários
 function preencherProduto() {
   const sel = document.getElementById('ml-produto');
   const opt = sel.options[sel.selectedIndex];
-  if (!opt || !opt.value) return;
-  document.getElementById('ml-un').value = opt.dataset.un||'';
-  document.getElementById('ml-vunit').value = opt.dataset.val||'';
-  calcTotal();
-}
-
-function calcTotal() {
-  const q = parseFloat(document.getElementById('ml-qtd').value)||0;
-  const v = parseFloat(document.getElementById('ml-vunit').value)||0;
-  document.getElementById('ml-vtotal').value = 'R$ ' + (q*v).toFixed(2);
+  if (!opt || !opt.value) { _prodPadrao = { un:'', valor:'' }; return; }
+  _prodPadrao = { un: opt.dataset.un || '', valor: opt.dataset.val || '' };
+  linhasFunc.forEach(function(l) {
+    if (l.status === 'pago' || l.status === 'parcial') return;
+    l.un = _prodPadrao.un;
+    l.vunit = _prodPadrao.valor;
+  });
+  renderLinhasFunc();
+  toast('Produto aplicado a todos os funcionários da ordem.','info');
 }
 
 async function salvarLanc() {
   const clienteId = document.getElementById('ml-cliente').value;
-  // Caso o usuário tenha escolhido no select sem clicar em nada mais, aproveita a seleção pendente
-  const pendente = document.getElementById('ml-func').value;
-  if (pendente) addFuncLanc(pendente);
-  const funcId = lancFuncs.length ? lancFuncs[0].id : '';
   const pedido = document.getElementById('ml-pedido').value.trim();
-  const tipo = document.getElementById('ml-tipo').value.trim();
-  if (!clienteId || !funcId || !pedido || !tipo) { toast('Preencha os campos obrigatórios.','error'); return; }
-  const clienteNome = document.getElementById('ml-cliente').options[document.getElementById('ml-cliente').selectedIndex].text;
-  const funcionarioNome = lancFuncs.map(f => f.nome).join(', ');
-  const qtd = parseFloat(document.getElementById('ml-qtd').value)||0;
-  const vunit = parseFloat(document.getElementById('ml-vunit').value)||0;
   const sit = document.getElementById('ml-sit').value;
-  const id = document.getElementById('ml-id').value;
-  const dados = {
-    cliente_id: clienteId, cliente_nome: clienteNome,
-    funcionario_id: funcId, funcionario_nome: funcionarioNome,
-    numero_pedido: pedido, tipo_servico: tipo,
+  const idEdit = document.getElementById('ml-id').value;
+  if (!clienteId || !pedido) { toast('Informe o cliente e o nº do pedido.','error'); return; }
+
+  const linhas = linhasFunc.filter(l => l.funcId || String(l.tipo).trim() || parseFloat(l.qtd) || parseFloat(l.vunit));
+  if (!linhas.length) { toast('Adicione ao menos um funcionário à ordem.','error'); return; }
+  for (let k = 0; k < linhas.length; k++) {
+    const l = linhas[k];
+    if (!l.funcId)                       { toast('Selecione o funcionário na linha ' + (k+1) + '.','error'); return; }
+    if (!String(l.tipo).trim())          { toast('Informe o tipo do serviço de ' + (nomeColabLanc(l.funcId)||'linha ' + (k+1)) + '.','error'); return; }
+    if (!(parseFloat(l.qtd) > 0))        { toast('Informe a quantidade/horas de ' + (nomeColabLanc(l.funcId)||'linha ' + (k+1)) + '.','error'); return; }
+    if (!(parseFloat(l.vunit) > 0))      { toast('Informe o valor unitário de ' + (nomeColabLanc(l.funcId)||'linha ' + (k+1)) + '.','error'); return; }
+  }
+  const idsFunc = linhas.map(l => l.funcId);
+  if (new Set(idsFunc).size !== idsFunc.length) { toast('O mesmo funcionário foi lançado duas vezes nesta ordem.','error'); return; }
+
+  const selCli = document.getElementById('ml-cliente');
+  const base = {
+    cliente_id: clienteId,
+    cliente_nome: selCli.options[selCli.selectedIndex].text,
+    numero_pedido: pedido,
     data_inicio: document.getElementById('ml-inicio').value || null,
     data_fim: document.getElementById('ml-fim').value || null,
     situacao: sit,
-    quantidade: qtd, unidade: document.getElementById('ml-un').value,
-    valor_unitario: vunit, valor_total: qtd*vunit,
-    observacoes: document.getElementById('ml-obs').value,
-    pagamento_status: sit === 'Concluído' ? 'concluido' : 'ativo'
+    observacoes: document.getElementById('ml-obs').value
   };
-  const irParaPagar = sit === 'Concluído' && !id;
-  fecharModal('modal-lanc');
-  const tb = document.getElementById('tb-lancamentos');
-  const totalFmt = 'R$ ' + (qtd*vunit).toLocaleString('pt-BR',{minimumFractionDigits:2});
-  const vUnitFmt = 'R$ ' + vunit.toLocaleString('pt-BR',{minimumFractionDigits:2});
-  if (id) {
-    const tr = tb.querySelector('tr[data-id="' + id + '"]');
-    if (tr) {
-      tr.cells[0].innerHTML = '<strong>' + pedido + '</strong>';
-      tr.cells[1].textContent = clienteNome;
-      tr.cells[2].textContent = funcionarioNome;
-      tr.cells[3].textContent = tipo;
-      tr.cells[4].textContent = qtd;
-      tr.cells[5].textContent = dados.unidade || '-';
-      tr.cells[6].textContent = vUnitFmt;
-      tr.cells[7].innerHTML = '<strong style="color:var(--amarelo)">' + totalFmt + '</strong>';
-      // cell[8]=adiantamento, cell[9]=situacao, cell[10]=leadtime, cell[11]=crono, cell[12]=inicio
-      tr.cells[9].innerHTML = badgeSit(sit);
-      tr.cells[12].textContent = dados.data_inicio || '-';
-    }
-    sbUpdate('lancamentos', id, dados)
-      .then(function() {
-        toast('Lançamento atualizado!');
-        invalidarCacheLanc();
-        // Se situacao mudou para Concluido, recarregar para remover da lista
-        if (sit === 'Conclu\u00eddo') {
-          setTimeout(function(){ carregarLancamentos(); setTimeout(function(){ irPara('pagamentos'); }, 800); }, 400);
+  const removidos = _grupoOriginal.filter(rid => !linhas.some(l => l.rid === rid));
+  const totalOrdem = linhas.reduce((s,l) => s + totalLinha(l), 0);
+
+  toast('Salvando ordem...','info');
+  try {
+    for (const l of linhas) {
+      const qtd = parseFloat(l.qtd) || 0;
+      const vunit = parseFloat(l.vunit) || 0;
+      const dados = Object.assign({}, base, {
+        funcionario_id: l.funcId,
+        funcionario_nome: nomeColabLanc(l.funcId),
+        tipo_servico: String(l.tipo).trim(),
+        quantidade: qtd,
+        unidade: l.un || '',
+        valor_unitario: vunit,
+        valor_total: qtd * vunit
+      });
+      if (l.rid) {
+        // não mexe no status de quem já foi pago / pago parcial
+        if (l.status !== 'pago' && l.status !== 'parcial') {
+          dados.pagamento_status = (sit === 'Concluído') ? 'concluido' : 'ativo';
         }
-      })
-      .catch(function(e) { toast('Erro: ' + e.message, 'error'); });
-  } else {
-    if (tb.querySelector('.empty-state')) tb.innerHTML = '';
-    const tmpId = 'tmp_' + Date.now();
-    const tr = document.createElement('tr');
-    tr.dataset.id = tmpId;
-    var leadHoje = '<span class="leadtime ok">Hoje</span>';
-    tr.innerHTML = '<td><strong>' + pedido + '</strong></td>'
-      + '<td>' + clienteNome + '</td><td>' + funcionarioNome + '</td><td>' + tipo + '</td>'
-      + '<td>' + qtd + '</td><td>' + (dados.unidade||'-') + '</td><td>' + vUnitFmt + '</td>'
-      + '<td><strong style="color:var(--amarelo)">' + totalFmt + '</strong></td>'
-      + '<td><span style="color:#444;font-size:11px">\u2014</span></td>'
-      + '<td>' + badgeSit(sit) + '</td>'
-      + '<td>' + leadHoje + '</td>'
-      + '<td><span class="crono-display" id="crono-' + tmpId + '">00:00</span> <button class="btn-crono" id="crono-btn-' + tmpId + '" onclick="toggleCrono(\'' + tmpId + '\')" title="Iniciar">&#9654;</button></td>'
-      + '<td>' + (dados.data_inicio||'-') + '</td>'
-      + '<td>'
-      + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">'
-      + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + tmpId + '\')" title="Editar" style="padding:5px 8px">✏️</button>'
-      + '<button class="btn btn-sm" onclick="concluirLanc(\'' + tmpId + '\')" title="Concluir obra" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#58d68d;padding:5px 8px;white-space:nowrap">✅ Concluir</button>'
-      + '<span style="width:1px;background:#3d3d3d;height:20px;display:inline-block;margin:0 2px"></span>'
-      + '<button class="btn btn-sm" onclick="abrirAdiantamento(\'' + tmpId + '\')" title="Registrar adiantamento" style="background:rgba(41,128,185,0.15);border:1px solid rgba(41,128,185,0.4);color:#5dade2;padding:5px 8px;white-space:nowrap">💵 Adianto</button>'
-      + '<span style="width:1px;background:#3d3d3d;height:20px;display:inline-block;margin:0 2px"></span>'
-      + '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + tmpId + '\',\'tb-lancamentos\',14)" title="Excluir lançamento" style="padding:5px 8px">🗑️</button>'
-      + '</div>'
-      + '</td>';
-    tb.insertBefore(tr, tb.firstChild);
+        await sbUpdate('lancamentos', l.rid, dados);
+      } else {
+        dados.pagamento_status = (sit === 'Concluído') ? 'concluido' : 'ativo';
+        await sbInsert('lancamentos', Object.assign({}, dados, { criado_em: new Date().toISOString() }));
+      }
+    }
+    for (const rid of removidos) { await sbDelete('lancamentos', rid); }
+
     invalidarCacheLanc();
-    sbInsert('lancamentos', Object.assign({}, dados, { criado_em: new Date().toISOString() }))
-      .then(function(row) {
-        tr.dataset.id = row.id;
-        // Cronômetro
-        var cronoEl = document.getElementById('crono-' + tmpId);
-        var cronoBtnEl = document.getElementById('crono-btn-' + tmpId);
-        if (cronoEl) { cronoEl.id = 'crono-' + row.id; }
-        if (cronoBtnEl) { cronoBtnEl.id = 'crono-btn-' + row.id; cronoBtnEl.setAttribute('onclick', 'toggleCrono(\'' + row.id + '\')'); }
-        // Botões de ação (buscar por title para não depender de índice)
-        var btnEditar = tr.querySelector('button[title="Editar"]');
-        var btnConcluirEl = tr.querySelector('button[title="Concluir obra"]');
-        var btnAdianto = tr.querySelector('button[title="Registrar adiantamento"]');
-        var btnExcluir = tr.querySelector('button[title="Excluir lançamento"]');
-        if (btnEditar) btnEditar.setAttribute('onclick', 'editarLanc(\'' + row.id + '\')');
-        if (btnConcluirEl) btnConcluirEl.setAttribute('onclick', 'concluirLanc(\'' + row.id + '\')');
-        if (btnAdianto) btnAdianto.setAttribute('onclick', 'abrirAdiantamento(\'' + row.id + '\')');
-        if (btnExcluir) btnExcluir.setAttribute('onclick', 'excluirLanc(\'' + row.id + '\',\'tb-lancamentos\',14)');
-        toast(irParaPagar ? 'Conclu\u00eddo! Redirecionando para A Pagar...' : 'Lançamento salvo!');
-        if (irParaPagar) setTimeout(function(){ irPara('pagamentos'); }, 1500);
-      })
-      .catch(function(e) { toast('Erro: ' + e.message, 'error'); tr.remove(); });
+    fecharModal('modal-lanc');
+    toast((idEdit ? 'Ordem atualizada' : 'Ordem lançada') + ': ' + linhas.length
+      + ' funcionário' + (linhas.length === 1 ? '' : 's') + ' · total ' + fmtBRL(totalOrdem));
+    await carregarLancamentos();
+    if (sit === 'Concluído') setTimeout(function(){ irPara('pagamentos'); }, 1500);
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'error');
   }
 }
 
