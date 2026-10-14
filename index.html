@@ -263,6 +263,23 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 input[type=number]::-webkit-inner-spin-button { opacity:.5; }
 
+/* Filtro estilo Excel no cabeçalho */
+th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.xf-btn { background:#222; border:1px solid #444; color:#888; border-radius:3px; width:18px; height:18px; padding:0; font-size:10px; line-height:16px; cursor:pointer; flex-shrink:0; }
+.xf-btn:hover { border-color:var(--amarelo); color:#EEE; }
+.xf-btn.ativo { background:var(--amarelo); border-color:var(--amarelo); color:var(--preto); font-weight:700; }
+.xf-pop { position:absolute; z-index:1500; width:250px; background:#2a2a2a; border:1px solid #555; border-radius:6px; box-shadow:0 10px 30px rgba(0,0,0,.6); padding:8px; font-size:12px; color:#DDD; text-transform:none; letter-spacing:0; }
+.xf-pop .xf-acao { display:block; width:100%; text-align:left; background:none; border:none; color:#DDD; padding:6px 8px; border-radius:4px; cursor:pointer; font-size:12px; }
+.xf-pop .xf-acao:hover { background:#3a3a3a; }
+.xf-pop .xf-sep { border-top:1px solid #3d3d3d; margin:6px 0; }
+.xf-pop input[type=text] { width:100%; padding:6px 8px; background:#1e1e1e; border:1px solid #444; border-radius:4px; color:#EEE; font-size:12px; margin-bottom:6px; }
+.xf-pop input[type=text]:focus { outline:none; border-color:var(--amarelo); }
+.xf-lista { max-height:220px; overflow-y:auto; background:#1e1e1e; border:1px solid #3d3d3d; border-radius:4px; padding:4px 0; }
+.xf-lista label { display:flex; align-items:center; gap:7px; padding:3px 8px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.xf-lista label:hover { background:#2d2d2d; }
+.xf-lista input { accent-color:var(--amarelo); flex-shrink:0; }
+.xf-rodape { display:flex; justify-content:flex-end; gap:6px; margin-top:8px; }
+
 /* Cronômetro */
 .crono-display { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; color:#f8c471; letter-spacing:1px; display:inline-block; min-width:58px; }
 .crono-display.rodando { color:#58d68d; }
@@ -576,6 +593,9 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
     <div class="tela" id="t-lancamentos">
       <div class="page-header"><h2>📋 Lançamentos</h2><p>Registro de obras e serviços</p></div>
       <div class="filtros">
+        <div class="field" style="flex:2;min-width:240px"><label>🔍 Pesquisar</label>
+          <input type="text" id="filtro-lanc-busca" placeholder="Pedido, cliente, funcionário, serviço, obs..." oninput="carregarLancamentosDebounce()">
+        </div>
         <div class="field"><label>Situação</label>
           <select id="filtro-lanc-sit" onchange="carregarLancamentos()">
             <option value="">Todas</option>
@@ -592,7 +612,10 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
           <select id="filtro-lanc-cli" onchange="carregarLancamentos()"><option value="">Todos</option></select>
         </div>
         <div class="field"><label>Nº Pedido</label>
-          <input type="text" id="filtro-lanc-pedido" placeholder="Buscar pedido..." oninput="carregarLancamentos()">
+          <input type="text" id="filtro-lanc-pedido" placeholder="Buscar pedido..." oninput="carregarLancamentosDebounce()">
+        </div>
+        <div class="field"><label>Tipo Serviço</label>
+          <select id="filtro-lanc-tipo" onchange="carregarLancamentos()"><option value="">Todos</option></select>
         </div>
         <div class="field"><label>Início (de)</label>
           <input type="date" id="filtro-lanc-data-de" onchange="carregarLancamentos()">
@@ -624,7 +647,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:.5; }
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Funcionário</th><th>Tipo Serviço</th><th>Qtd</th><th>Un</th><th>Valor Unit.</th><th>Total</th><th>Adiantamento</th><th>Situação</th><th>Lead Time</th><th>Crono</th><th>Início</th><th>Ações</th></tr></thead>
+            <thead><tr><th><div class="xf-th">Nº Pedido<button type="button" class="xf-btn" id="xf-btn-pedido" onclick="abrirFiltroColuna(event,'pedido')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Cliente<button type="button" class="xf-btn" id="xf-btn-cliente" onclick="abrirFiltroColuna(event,'cliente')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Funcionário<button type="button" class="xf-btn" id="xf-btn-func" onclick="abrirFiltroColuna(event,'func')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Tipo Serviço<button type="button" class="xf-btn" id="xf-btn-tipo" onclick="abrirFiltroColuna(event,'tipo')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Qtd<button type="button" class="xf-btn" id="xf-btn-qtd" onclick="abrirFiltroColuna(event,'qtd')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Un<button type="button" class="xf-btn" id="xf-btn-un" onclick="abrirFiltroColuna(event,'un')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Valor Unit.<button type="button" class="xf-btn" id="xf-btn-vunit" onclick="abrirFiltroColuna(event,'vunit')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Total<button type="button" class="xf-btn" id="xf-btn-total" onclick="abrirFiltroColuna(event,'total')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Adiantamento<button type="button" class="xf-btn" id="xf-btn-adiant" onclick="abrirFiltroColuna(event,'adiant')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Situação<button type="button" class="xf-btn" id="xf-btn-sit" onclick="abrirFiltroColuna(event,'sit')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Lead Time<button type="button" class="xf-btn" id="xf-btn-lead" onclick="abrirFiltroColuna(event,'lead')" title="Filtrar">▾</button></div></th><th>Crono</th><th><div class="xf-th">Início<button type="button" class="xf-btn" id="xf-btn-inicio" onclick="abrirFiltroColuna(event,'inicio')" title="Filtrar">▾</button></div></th><th>Ações</th></tr></thead>
             <tbody id="tb-lancamentos"></tbody>
           </table>
         </div>
@@ -1368,6 +1391,15 @@ function irPara(tela) {
   if (loaders[tela]) loaders[tela]();
 }
 
+// Recarrega a tela em que o usuário está, sem navegar para outra
+function recarregarTelaAtual() {
+  const loaders = {
+    'dashboard': carregarDashboard, 'lancamentos': carregarLancamentos, 'calendario': carregarCalendario,
+    'pagamentos': carregarPagamentos, 'finalizados': carregarFinalizados
+  };
+  if (loaders[telaAtual]) loaders[telaAtual]();
+}
+
 async function inicializar() {
   aplicarPermissoesSidebar();
   try {
@@ -1769,8 +1801,8 @@ async function carregarLancamentos() {
   if (filtroFuncEl) filtroFuncEl.style.display = isTecnico ? 'none' : '';
   if (!isTecnico) {
     await preencherFiltroFuncs('filtro-lanc-func');
-    await preencherFiltroClientes('filtro-lanc-cli');
   }
+  await preencherFiltroClientes('filtro-lanc-cli');
 
   try {
     var params = 'order=criado_em.desc';
@@ -1783,7 +1815,16 @@ async function carregarLancamentos() {
 
     // Filtros adicionais: funcionário, cliente, nº pedido, período de início, mês e ano
     var fFunc = !isTecnico ? document.getElementById('filtro-lanc-func').value : '';
-    var fCli = !isTecnico ? document.getElementById('filtro-lanc-cli').value : '';
+    var fCli = document.getElementById('filtro-lanc-cli').value;
+    var fBusca = (document.getElementById('filtro-lanc-busca').value || '').trim().toLowerCase();
+    var fTipo = document.getElementById('filtro-lanc-tipo').value;
+
+    // Popula o filtro de Tipo de Serviço com os tipos existentes (mantém a seleção atual)
+    var selTipo = document.getElementById('filtro-lanc-tipo');
+    var tiposUnicos = Array.from(new Set(docs.map(function(l){ return (l.tipo_servico||'').trim(); }).filter(Boolean))).sort();
+    selTipo.innerHTML = '<option value="">Todos</option>' + tiposUnicos.map(function(t){
+      return '<option value="' + escAttr(t) + '"' + (t === fTipo ? ' selected' : '') + '>' + escAttr(t) + '</option>';
+    }).join('');
     var fPedido = (document.getElementById('filtro-lanc-pedido').value || '').trim().toLowerCase();
     var fDataDe = document.getElementById('filtro-lanc-data-de').value;
     var fDataAte = document.getElementById('filtro-lanc-data-ate').value;
@@ -1793,6 +1834,12 @@ async function carregarLancamentos() {
     if (fFunc) docs = docs.filter(function(l){ return lancTemFuncId(l, fFunc); });
     if (fCli) docs = docs.filter(function(l){ return l.cliente_id === fCli; });
     if (fPedido) docs = docs.filter(function(l){ return (l.numero_pedido||'').toString().toLowerCase().indexOf(fPedido) !== -1; });
+    if (fTipo) docs = docs.filter(function(l){ return (l.tipo_servico||'').trim() === fTipo; });
+    if (fBusca) docs = docs.filter(function(l){
+      var txt = [l.numero_pedido, l.cliente_nome, l.funcionario_nome, l.tipo_servico, l.situacao, l.unidade, l.observacoes, l.data_inicio]
+        .map(function(v){ return (v == null ? '' : String(v)); }).join(' ').toLowerCase();
+      return txt.indexOf(fBusca) !== -1;
+    });
     if (fDataDe) docs = docs.filter(function(l){ return l.data_inicio && l.data_inicio >= fDataDe; });
     if (fDataAte) docs = docs.filter(function(l){ return l.data_inicio && l.data_inicio <= fDataAte; });
     if (fMes || fAno) {
@@ -1806,8 +1853,6 @@ async function carregarLancamentos() {
       });
     }
 
-    if (!docs.length) { tb.innerHTML = '<tr><td colspan="14" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>'; return; }
-
     var todosAdiant = [];
     try { todosAdiant = await sbGet('adiantamentos', 'order=data.asc'); } catch(e) {}
     var adiantMap = {};
@@ -1817,6 +1862,14 @@ async function carregarLancamentos() {
     });
 
     var hoje = new Date(); hoje.setHours(0,0,0,0);
+
+    // Filtros estilo Excel no cabeçalho
+    _xfCtx = { adiantMap: adiantMap, hoje: hoje };
+    _xfBase = docs.slice();
+    docs = aplicarFiltrosColuna(docs);
+    atualizarBotoesFiltroColuna();
+
+    if (!docs.length) { tb.innerHTML = '<tr><td colspan="14" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>'; return; }
 
     tb.innerHTML = docs.map(function(l) {
       var totalFmt = 'R$ ' + parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -2180,8 +2233,7 @@ async function salvarLanc() {
     fecharModal('modal-lanc');
     toast((idEdit ? 'Ordem atualizada' : 'Ordem lançada') + ': ' + linhas.length
       + ' funcionário' + (linhas.length === 1 ? '' : 's') + ' · total ' + fmtBRL(totalOrdem));
-    await carregarLancamentos();
-    if (sit === 'Concluído') setTimeout(function(){ irPara('pagamentos'); }, 1500);
+    recarregarTelaAtual();
   } catch(e) {
     toast('Erro ao salvar: ' + e.message, 'error');
   }
@@ -2388,8 +2440,7 @@ async function confirmarPagamento() {
     sbUpdate('lancamentos', id, payload)
       .then(function() {
         invalidarCacheLanc();
-        toast('Pagamento total registrado! Redirecionando... &#9989;');
-        setTimeout(function(){ irPara('finalizados'); }, 1000);
+        toast('Pagamento total registrado! \u2705');
       })
       .catch(function(e) { toast('Erro ao atualizar: ' + e.message, 'error'); });
   } else {
@@ -2680,7 +2731,198 @@ async function preencherFiltroClientes(elId) {
   });
 }
 
+// =============================================
+// FILTRO ESTILO EXCEL — CABEÇALHO DE LANÇAMENTOS
+// =============================================
+var _xfFiltros = {};      // { coluna: [valores permitidos] }
+var _xfOrdem = null;      // { col, dir: 1 | -1 }
+var _xfBase = [];         // lançamentos antes dos filtros de coluna
+var _xfCtx = { adiantMap:{}, hoje:new Date() };
+var _xfVAZIO = '(Vazias)';
+
+function _xfMoeda(v) { return 'R$ ' + (parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); }
+
+function valorColunaLanc(l, col) {
+  var v;
+  switch (col) {
+    case 'pedido':  v = l.numero_pedido; break;
+    case 'cliente': v = l.cliente_nome; break;
+    case 'func':    v = l.funcionario_nome; break;
+    case 'tipo':    v = l.tipo_servico; break;
+    case 'qtd':     v = (l.quantidade != null ? String(l.quantidade) : ''); break;
+    case 'un':      v = l.unidade; break;
+    case 'vunit':   v = _xfMoeda(l.valor_unitario); break;
+    case 'total':   v = _xfMoeda(l.valor_total); break;
+    case 'adiant':
+      var ad = (_xfCtx.adiantMap[l.id] || []).reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+      v = ad > 0 ? _xfMoeda(ad) : 'Sem adiantamento'; break;
+    case 'sit':     v = l.situacao || 'Em andamento'; break;
+    case 'lead':
+      var ref = l.data_inicio || (l.criado_em ? l.criado_em.split('T')[0] : null);
+      if (!ref) { v = ''; break; }
+      var dias = Math.max(0, Math.round((_xfCtx.hoje - new Date(ref + 'T12:00:00')) / 86400000));
+      v = dias === 0 ? 'Hoje' : (dias === 1 ? '1 dia' : dias + ' dias'); break;
+    case 'inicio':  v = l.data_inicio; break;
+    default: v = '';
+  }
+  v = (v == null ? '' : String(v)).trim();
+  return v === '' ? _xfVAZIO : v;
+}
+
+// Chave de ordenação (números e datas em ordem correta)
+function _xfChave(l, col) {
+  switch (col) {
+    case 'qtd':   return parseFloat(l.quantidade) || 0;
+    case 'vunit': return parseFloat(l.valor_unitario) || 0;
+    case 'total': return parseFloat(l.valor_total) || 0;
+    case 'adiant': return (_xfCtx.adiantMap[l.id] || []).reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+    case 'lead':
+      var ref = l.data_inicio || (l.criado_em ? l.criado_em.split('T')[0] : '');
+      return ref ? -new Date(ref + 'T12:00:00').getTime() : 0;
+    case 'inicio': return l.data_inicio || '';
+    default: return valorColunaLanc(l, col).toLowerCase();
+  }
+}
+
+function aplicarFiltrosColuna(docs) {
+  var out = docs.filter(function(l) {
+    return Object.keys(_xfFiltros).every(function(col) {
+      return _xfFiltros[col].indexOf(valorColunaLanc(l, col)) !== -1;
+    });
+  });
+  if (_xfOrdem) {
+    var c = _xfOrdem.col, d = _xfOrdem.dir;
+    out.sort(function(a, b) {
+      var ka = _xfChave(a, c), kb = _xfChave(b, c);
+      if (typeof ka === 'number' && typeof kb === 'number') return (ka - kb) * d;
+      return String(ka).localeCompare(String(kb), 'pt-BR', { numeric:true }) * d;
+    });
+  }
+  return out;
+}
+
+function atualizarBotoesFiltroColuna() {
+  document.querySelectorAll('#t-lancamentos .xf-btn').forEach(function(b) {
+    var col = b.id.replace('xf-btn-', '');
+    var ativo = !!_xfFiltros[col] || (_xfOrdem && _xfOrdem.col === col);
+    b.classList.toggle('ativo', ativo);
+    b.textContent = _xfFiltros[col] ? '⧩' : (_xfOrdem && _xfOrdem.col === col ? (_xfOrdem.dir === 1 ? '↑' : '↓') : '▾');
+  });
+}
+
+function fecharFiltroColuna() {
+  var p = document.getElementById('xf-pop');
+  if (p) p.remove();
+  document.removeEventListener('mousedown', _xfCliqueFora, true);
+}
+function _xfCliqueFora(e) {
+  var p = document.getElementById('xf-pop');
+  if (p && !p.contains(e.target) && !e.target.classList.contains('xf-btn')) fecharFiltroColuna();
+}
+
+function abrirFiltroColuna(ev, col) {
+  ev.stopPropagation();
+  var jaAberto = document.getElementById('xf-pop');
+  if (jaAberto && jaAberto.dataset.col === col) { fecharFiltroColuna(); return; }
+  fecharFiltroColuna();
+
+  // Valores possíveis: respeitam os filtros das OUTRAS colunas (como no Excel)
+  var base = _xfBase.filter(function(l) {
+    return Object.keys(_xfFiltros).every(function(c) {
+      return c === col || _xfFiltros[c].indexOf(valorColunaLanc(l, c)) !== -1;
+    });
+  });
+  var mapa = {};
+  base.forEach(function(l) { var v = valorColunaLanc(l, col); if (!(v in mapa)) mapa[v] = _xfChave(l, col); });
+  var valores = Object.keys(mapa).sort(function(a, b) {
+    if (a === _xfVAZIO) return 1; if (b === _xfVAZIO) return -1;
+    var ka = mapa[a], kb = mapa[b];
+    if (typeof ka === 'number' && typeof kb === 'number') return ka - kb;
+    return String(ka).localeCompare(String(kb), 'pt-BR', { numeric:true });
+  });
+  var sel = _xfFiltros[col] || valores;
+
+  var pop = document.createElement('div');
+  pop.className = 'xf-pop'; pop.id = 'xf-pop'; pop.dataset.col = col;
+  pop.innerHTML =
+      '<button type="button" class="xf-acao" onclick="ordenarColuna(\'' + col + '\',1)">↑ Classificar de A a Z</button>'
+    + '<button type="button" class="xf-acao" onclick="ordenarColuna(\'' + col + '\',-1)">↓ Classificar de Z a A</button>'
+    + '<div class="xf-sep"></div>'
+    + '<button type="button" class="xf-acao" onclick="limparFiltroColuna(\'' + col + '\')"' + (_xfFiltros[col] ? '' : ' disabled style="opacity:.4;cursor:default"') + '>✕ Limpar filtro desta coluna</button>'
+    + '<div class="xf-sep"></div>'
+    + '<input type="text" placeholder="Pesquisar" oninput="xfPesquisar(this.value)" />'
+    + '<div class="xf-lista">'
+    +   '<label><input type="checkbox" id="xf-todos" onchange="xfMarcarTodos(this.checked)"' + (sel.length === valores.length ? ' checked' : '') + ' /> <strong>(Selecionar Tudo)</strong></label>'
+    +   valores.map(function(v) {
+          return '<label class="xf-item" data-txt="' + escAttr(v.toLowerCase()) + '"><input type="checkbox" value="' + escAttr(v) + '"'
+            + (sel.indexOf(v) !== -1 ? ' checked' : '') + ' onchange="xfSincTodos()" /> ' + escAttr(v) + '</label>';
+        }).join('')
+    + '</div>'
+    + '<div class="xf-rodape">'
+    +   '<button type="button" class="btn btn-ghost btn-sm" onclick="fecharFiltroColuna()">Cancelar</button>'
+    +   '<button type="button" class="btn btn-primary btn-sm" onclick="xfAplicar(\'' + col + '\')">OK</button>'
+    + '</div>';
+  document.body.appendChild(pop);
+
+  var r = ev.currentTarget.closest('th').getBoundingClientRect();
+  var left = r.left + window.scrollX;
+  if (left + 250 > window.scrollX + document.documentElement.clientWidth - 8) left = window.scrollX + document.documentElement.clientWidth - 258;
+  pop.style.left = Math.max(8, left) + 'px';
+  pop.style.top = (r.bottom + window.scrollY + 2) + 'px';
+  setTimeout(function(){ document.addEventListener('mousedown', _xfCliqueFora, true); }, 0);
+  var inp = pop.querySelector('input[type=text]'); if (inp) inp.focus();
+}
+
+function xfPesquisar(txt) {
+  var t = (txt || '').trim().toLowerCase();
+  document.querySelectorAll('#xf-pop .xf-item').forEach(function(lb) {
+    var mostra = !t || lb.dataset.txt.indexOf(t) !== -1;
+    lb.style.display = mostra ? '' : 'none';
+    lb.querySelector('input').checked = mostra; // como no Excel: pesquisa seleciona os encontrados
+  });
+  xfSincTodos();
+}
+function xfMarcarTodos(on) {
+  document.querySelectorAll('#xf-pop .xf-item').forEach(function(lb) {
+    if (lb.style.display !== 'none') lb.querySelector('input').checked = on;
+  });
+}
+function xfSincTodos() {
+  var itens = Array.from(document.querySelectorAll('#xf-pop .xf-item')).filter(function(lb){ return lb.style.display !== 'none'; });
+  var t = document.getElementById('xf-todos');
+  if (t) t.checked = itens.length > 0 && itens.every(function(lb){ return lb.querySelector('input').checked; });
+}
+function xfAplicar(col) {
+  var todos = Array.from(document.querySelectorAll('#xf-pop .xf-item input'));
+  var marcados = todos.filter(function(i){ return i.checked && i.closest('.xf-item').style.display !== 'none'; }).map(function(i){ return i.value; });
+  if (!marcados.length) { toast('Selecione ao menos um valor.', 'error'); return; }
+  if (marcados.length === todos.length) delete _xfFiltros[col];
+  else _xfFiltros[col] = marcados;
+  fecharFiltroColuna();
+  carregarLancamentos();
+}
+function ordenarColuna(col, dir) {
+  _xfOrdem = { col: col, dir: dir };
+  fecharFiltroColuna();
+  carregarLancamentos();
+}
+function limparFiltroColuna(col) {
+  delete _xfFiltros[col];
+  if (_xfOrdem && _xfOrdem.col === col) _xfOrdem = null;
+  fecharFiltroColuna();
+  carregarLancamentos();
+}
+
+var _timerBuscaLanc = null;
+function carregarLancamentosDebounce() {
+  clearTimeout(_timerBuscaLanc);
+  _timerBuscaLanc = setTimeout(carregarLancamentos, 350);
+}
+
 function limparFiltrosLanc() {
+  _xfFiltros = {}; _xfOrdem = null; fecharFiltroColuna();
+  document.getElementById('filtro-lanc-busca').value = '';
+  document.getElementById('filtro-lanc-tipo').value = '';
   document.getElementById('filtro-lanc-sit').value = '';
   document.getElementById('filtro-lanc-func').value = '';
   document.getElementById('filtro-lanc-cli').value = '';
@@ -3248,7 +3490,7 @@ function toggleCrono(lancId) {
 // CONCLUIR LANÇAMENTO (botão rápido na linha)
 // =============================================
 async function concluirLanc(lancId) {
-  if (!confirm('Marcar este lançamento como Conclu\u00eddo e mover para A Pagar?')) return;
+  if (!confirm('Marcar este lançamento como Conclu\u00eddo?')) return;
 
   // Parar cronometro se estiver rodando
   if (_cronoState[lancId] && _cronoState[lancId].intervalo) {
@@ -3264,21 +3506,9 @@ async function concluirLanc(lancId) {
       data_fim: hoje
     });
     invalidarCacheLanc();
-    toast('Obra conclu\u00edda! Movendo para A Pagar... \u2705');
-    // Remove linha da tabela imediatamente
-    var tr = document.querySelector('#tb-lancamentos tr[data-id="' + lancId + '"]');
-    if (tr) {
-      tr.style.transition = 'opacity 0.4s';
-      tr.style.opacity = '0';
-      setTimeout(function(){
-        if (tr.parentNode) tr.parentNode.removeChild(tr);
-        var tb = document.getElementById('tb-lancamentos');
-        if (tb && tb.querySelectorAll('tr[data-id]').length === 0) {
-          tb.innerHTML = '<tr><td colspan="14" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>';
-        }
-      }, 400);
-    }
-    setTimeout(function(){ irPara('pagamentos'); }, 900);
+    toast('Obra conclu\u00edda! Dispon\u00edvel em A Pagar. \u2705');
+    // Permanece na tela atual — apenas atualiza a lista
+    if (telaAtual === 'lancamentos') carregarLancamentos();
   } catch(e) {
     toast('Erro ao concluir: ' + e.message, 'error');
   }
