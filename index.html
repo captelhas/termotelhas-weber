@@ -151,6 +151,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 /* Dashboard */
 .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.stats-grid.compacto { margin-bottom:18px; }
+.stats-grid.compacto .stat-card .value { font-size:26px; }
+.pdf-bar { display:flex; gap:8px; align-items:center; }
+.pdf-bar select { padding:8px 10px; background:#222; border:1px solid #444; border-radius:6px; color:#EEE; font-size:12px; font-family:'Barlow',sans-serif; }
+@media (max-width:900px) { .stats-grid { grid-template-columns:repeat(2,1fr); } }
+
+/* Ranking */
+.rank-pos { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:800; color:#777; width:44px; }
+.rank-pos.p1 { color:#F5C542; } .rank-pos.p2 { color:#C9CED6; } .rank-pos.p3 { color:#CD8A4B; }
+.rank-val { font-weight:600; white-space:nowrap; }
+.rank-qtd { display:block; font-size:10px; color:#777; font-weight:400; }
+.rank-bar { height:4px; background:#2a2a2a; border-radius:2px; margin-top:5px; overflow:hidden; }
+.rank-bar span { display:block; height:100%; background:var(--amarelo); border-radius:2px; }
+tfoot td { border-top:2px solid var(--amarelo); border-bottom:none; font-weight:700; color:#EEE; }
 .stat-card {
   background:var(--cinza-escuro); border:1px solid var(--borda); border-radius:10px; padding:20px;
   border-left:4px solid var(--amarelo);
@@ -431,6 +445,7 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
     <div class="nav-group">
       <div class="nav-label">Principal</div>
       <div class="nav-item active" data-tela="dashboard" onclick="irPara('dashboard')"><span class="icon">📊</span> Dashboard</div>
+      <div class="nav-item" data-tela="ranking" onclick="irPara('ranking')"><span class="icon">🏆</span> Ranking</div>
     </div>
     <div class="nav-group">
       <div class="nav-label">Cadastros</div>
@@ -640,9 +655,19 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
         </div>
         <button class="btn btn-ghost btn-sm" onclick="limparFiltrosLanc()" title="Limpar filtros">✕ Limpar</button>
       </div>
+      <div class="stats-grid compacto">
+        <div class="stat-card"><div class="label">Lançamentos</div><div class="value" id="sl-qtd">0</div><div class="sub" id="sl-qtd-sub">no filtro</div></div>
+        <div class="stat-card blue"><div class="label">Total Lançado</div><div class="value" id="sl-total">R$ 0,00</div><div class="sub">soma do filtro</div></div>
+        <div class="stat-card green"><div class="label">Adiantado</div><div class="value" id="sl-adiant">R$ 0,00</div><div class="sub">adiantamentos</div></div>
+        <div class="stat-card red"><div class="label">Saldo</div><div class="value" id="sl-saldo">R$ 0,00</div><div class="sub">total − adiantado</div></div>
+      </div>
       <div class="toolbar">
         <div class="toolbar-left"></div>
-        <button class="btn btn-primary" onclick="abrirModalLanc()">+ Novo Lançamento</button>
+        <div class="pdf-bar">
+          <select id="pdf-orient-lanc" title="Orientação do PDF"><option value="landscape">Paisagem</option><option value="portrait">Retrato</option></select>
+          <button class="btn btn-ghost" onclick="pdfLancamentos()">📄 Gerar PDF</button>
+          <button class="btn btn-primary" onclick="abrirModalLanc()">+ Novo Lançamento</button>
+        </div>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -713,6 +738,19 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
           <select id="f-pag-func" onchange="carregarPagamentos()"><option value="">Todos</option></select>
         </div>
       </div>
+      <div class="stats-grid compacto">
+        <div class="stat-card"><div class="label">Lançamentos</div><div class="value" id="sp-qtd">0</div><div class="sub">no filtro</div></div>
+        <div class="stat-card blue"><div class="label">Total Lançado</div><div class="value" id="sp-total">R$ 0,00</div><div class="sub">soma do filtro</div></div>
+        <div class="stat-card green"><div class="label">Adiantado</div><div class="value" id="sp-adiant">R$ 0,00</div><div class="sub" id="sp-pago-sub">já pago: R$ 0,00</div></div>
+        <div class="stat-card red"><div class="label">Saldo a Pagar</div><div class="value" id="sp-saldo">R$ 0,00</div><div class="sub">total − já pago</div></div>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left"></div>
+        <div class="pdf-bar">
+          <select id="pdf-orient-pag" title="Orientação do PDF"><option value="landscape">Paisagem</option><option value="portrait">Retrato</option></select>
+          <button class="btn btn-ghost" onclick="pdfPagamentos()">📄 Gerar PDF</button>
+        </div>
+      </div>
       <div class="card">
         <div class="table-wrap">
           <table>
@@ -746,6 +784,19 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
           <select id="f-fin-func" onchange="carregarFinalizados()"><option value="">Todos</option></select>
         </div>
       </div>
+      <div class="stats-grid compacto">
+        <div class="stat-card"><div class="label">Pagamentos</div><div class="value" id="sf-qtd">0</div><div class="sub">no filtro</div></div>
+        <div class="stat-card green"><div class="label">Total Pago</div><div class="value" id="sf-total">R$ 0,00</div><div class="sub">soma do filtro</div></div>
+        <div class="stat-card blue"><div class="label">Funcionários</div><div class="value" id="sf-func">0</div><div class="sub">com pagamento</div></div>
+        <div class="stat-card"><div class="label">Média por Obra</div><div class="value" id="sf-media">R$ 0,00</div><div class="sub">total ÷ pagamentos</div></div>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left"></div>
+        <div class="pdf-bar">
+          <select id="pdf-orient-fin" title="Orientação do PDF"><option value="landscape">Paisagem</option><option value="portrait">Retrato</option></select>
+          <button class="btn btn-ghost" onclick="pdfFinalizados()">📄 Gerar PDF</button>
+        </div>
+      </div>
       <div class="card">
         <div class="table-wrap">
           <table>
@@ -756,6 +807,51 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
       </div>
     </div>
 
+
+    <!-- RANKING -->
+    <div class="tela" id="t-ranking">
+      <div class="page-header"><h2>🏆 Ranking de Colaboradores</h2><p>Valores por colaborador: em aberto, concluído a pagar, concluído pago e total</p></div>
+      <div class="filtros">
+        <div class="field"><label>Mês</label>
+          <select id="rk-mes" onchange="carregarRanking()">
+            <option value="">Todos</option>
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+            <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+            <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+        </div>
+        <div class="field"><label>Ano</label>
+          <select id="rk-ano" onchange="carregarRanking()">
+            <option value="">Todos</option>
+            <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+          </select>
+        </div>
+        <div class="field"><label>Ordenar por</label>
+          <select id="rk-ordem" onchange="carregarRanking()">
+            <option value="total">Total</option>
+            <option value="aberto">Em aberto</option>
+            <option value="apagar">Concluído a pagar</option>
+            <option value="pago">Concluído pago</option>
+          </select>
+        </div>
+      </div>
+      <div class="stats-grid compacto">
+        <div class="stat-card"><div class="label">Em Aberto</div><div class="value" id="rk-s-aberto">R$ 0,00</div><div class="sub">obras não concluídas</div></div>
+        <div class="stat-card red"><div class="label">Concluído a Pagar</div><div class="value" id="rk-s-apagar">R$ 0,00</div><div class="sub">saldo pendente</div></div>
+        <div class="stat-card green"><div class="label">Concluído Pago</div><div class="value" id="rk-s-pago">R$ 0,00</div><div class="sub">pago (inclui parciais)</div></div>
+        <div class="stat-card blue"><div class="label">Total</div><div class="value" id="rk-s-total">R$ 0,00</div><div class="sub" id="rk-s-colabs">0 colaboradores</div></div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Colaborador</th><th style="text-align:right">Em Aberto</th><th style="text-align:right">Concluído a Pagar</th><th style="text-align:right">Concluído Pago</th><th style="text-align:right">Total</th></tr></thead>
+            <tbody id="tb-ranking"></tbody>
+            <tfoot id="tf-ranking"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
 
     <!-- RECIBO -->
     <div class="tela" id="t-recibo">
@@ -1258,6 +1354,7 @@ function _persistirExtras() {
 // TELAS DISPONÍVEIS
 const TELAS_DISPONIVEIS = [
   { id: 'dashboard',     label: '📊 Dashboard' },
+  { id: 'ranking',       label: '🏆 Ranking' },
   { id: 'colaboradores', label: '👷 Colaboradores' },
   { id: 'clientes',      label: '🏢 Clientes' },
   { id: 'produtos',      label: '🏗️ Produtos' },
@@ -1272,11 +1369,11 @@ const TELAS_DISPONIVEIS = [
 
 // PERMISSÕES PADRÃO POR PERFIL
 const PERMISSOES_PADRAO = {
-  admin:      ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo','permissoes'],
-  gerente:    ['dashboard','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo'],
+  admin:      ['dashboard','ranking','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo','permissoes'],
+  gerente:    ['dashboard','ranking','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo'],
   tecnico01:  ['lancamentos','calendario'],
   tecnico02:  ['lancamentos','calendario'],
-  financeiro: ['dashboard','pagamentos','finalizados','recibo']
+  financeiro: ['dashboard','ranking','pagamentos','finalizados','recibo']
 };
 
 function getPermissoes(perfil) {
@@ -1377,6 +1474,7 @@ function irPara(tela) {
   document.querySelectorAll('.nav-item[data-tela="' + tela + '"]').forEach(n => n.classList.add('active'));
   const loaders = {
     'dashboard': carregarDashboard,
+    'ranking': carregarRanking,
     'colaboradores': carregarColaboradores,
     'clientes': carregarClientes,
     'produtos': carregarProdutos,
@@ -1394,7 +1492,7 @@ function irPara(tela) {
 // Recarrega a tela em que o usuário está, sem navegar para outra
 function recarregarTelaAtual() {
   const loaders = {
-    'dashboard': carregarDashboard, 'lancamentos': carregarLancamentos, 'calendario': carregarCalendario,
+    'dashboard': carregarDashboard, 'ranking': carregarRanking, 'lancamentos': carregarLancamentos, 'calendario': carregarCalendario,
     'pagamentos': carregarPagamentos, 'finalizados': carregarFinalizados
   };
   if (loaders[telaAtual]) loaders[telaAtual]();
@@ -1869,6 +1967,23 @@ async function carregarLancamentos() {
     docs = aplicarFiltrosColuna(docs);
     atualizarBotoesFiltroColuna();
 
+    // Caixas de totais + base do PDF (respeitam todos os filtros)
+    _pdfLancRows = docs.slice();
+    _pdfLancAdiant = adiantMap;
+    (function(){
+      var tot = 0, adi = 0, conc = 0;
+      docs.forEach(function(l){
+        tot += parseFloat(l.valor_total||0);
+        adi += (adiantMap[l.id] || []).reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+        if (l.situacao === 'Concluído') conc++;
+      });
+      document.getElementById('sl-qtd').textContent = docs.length;
+      document.getElementById('sl-qtd-sub').textContent = conc + ' concluído(s) · ' + (docs.length - conc) + ' em aberto';
+      document.getElementById('sl-total').textContent = fmtBRL(tot);
+      document.getElementById('sl-adiant').textContent = fmtBRL(adi);
+      document.getElementById('sl-saldo').textContent = fmtBRL(Math.max(0, tot - adi));
+    })();
+
     if (!docs.length) { tb.innerHTML = '<tr><td colspan="14" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>'; return; }
 
     tb.innerHTML = docs.map(function(l) {
@@ -2262,16 +2377,33 @@ async function carregarPagamentos() {
       return true;
     });
   }
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">💰</div><p>Nenhum lançamento a pagar.</p></td></tr>'; return; }
-
   // Buscar adiantamentos para os lançamentos exibidos
   var todosAdiant = [];
-  try { todosAdiant = await sbGet('adiantamentos', 'order=data.asc'); } catch(e) {}
+  if (rows.length) { try { todosAdiant = await sbGet('adiantamentos', 'order=data.asc'); } catch(e) {} }
   var adiantMap = {};
   todosAdiant.forEach(function(a){
     if (!adiantMap[a.lancamento_id]) adiantMap[a.lancamento_id] = [];
     adiantMap[a.lancamento_id].push(a);
   });
+
+  // Caixas de totais + base do PDF
+  _pdfPagRows = rows.slice();
+  _pdfPagAdiant = adiantMap;
+  (function(){
+    var tot = 0, pago = 0, adi = 0;
+    rows.forEach(function(l){
+      tot += parseFloat(l.valor_total||0);
+      pago += parseFloat(l.valor_pago||0);
+      adi += (adiantMap[l.id] || []).reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+    });
+    document.getElementById('sp-qtd').textContent = rows.length;
+    document.getElementById('sp-total').textContent = fmtBRL(tot);
+    document.getElementById('sp-adiant').textContent = fmtBRL(adi);
+    document.getElementById('sp-pago-sub').textContent = 'já pago (parcial): ' + fmtBRL(pago);
+    document.getElementById('sp-saldo').textContent = fmtBRL(Math.max(0, tot - pago));
+  })();
+
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">💰</div><p>Nenhum lançamento a pagar.</p></td></tr>'; return; }
 
   tb.innerHTML = rows.map(l => {
     const total = parseFloat(l.valor_total||0);
@@ -2441,6 +2573,7 @@ async function confirmarPagamento() {
       .then(function() {
         invalidarCacheLanc();
         toast('Pagamento total registrado! \u2705');
+        setTimeout(function(){ if (telaAtual === 'pagamentos') carregarPagamentos(); }, 450);
       })
       .catch(function(e) { toast('Erro ao atualizar: ' + e.message, 'error'); });
   } else {
@@ -2475,6 +2608,18 @@ async function carregarFinalizados() {
     });
   }
   rows.sort((a,b) => (b.data_pagamento||'').localeCompare(a.data_pagamento||''));
+
+  // Caixas de totais + base do PDF
+  _pdfFinRows = rows.slice();
+  (function(){
+    const tot = rows.reduce((s,l) => s + parseFloat(l.valor_total||0), 0);
+    const funcs = new Set(rows.map(l => l.funcionario_id || l.funcionario_nome || '-'));
+    document.getElementById('sf-qtd').textContent = rows.length;
+    document.getElementById('sf-total').textContent = fmtBRL(tot);
+    document.getElementById('sf-func').textContent = rows.length ? funcs.size : 0;
+    document.getElementById('sf-media').textContent = fmtBRL(rows.length ? tot / rows.length : 0);
+  })();
+
   if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">✅</div><p>Nenhum pagamento finalizado.</p></td></tr>'; return; }
   tb.innerHTML = rows.map(l => `<tr data-id="${l.id}">
     <td><strong>${l.numero_pedido||'-'}</strong></td>
@@ -3177,7 +3322,7 @@ document.addEventListener('keydown', e => {
   }
 }, true);
 
-document.querySelectorAll('#dash-ano, #f-pag-ano, #f-fin-ano').forEach(el => {
+document.querySelectorAll('#dash-ano, #f-pag-ano, #f-fin-ano, #rk-ano').forEach(el => {
   el.value = new Date().getFullYear().toString();
 });
 document.getElementById('dash-mes').value = (new Date().getMonth() + 1).toString();
@@ -3439,6 +3584,246 @@ function renderReciboParcela(l, todasParcelas, parcelaSelecionada) {
       Termotelhas Weber · Parcela ${numParcela}/${todasParcelas.length} · Emitido em ${hoje} · Sistema de Gestão
     </div>
   `;
+}
+
+// =============================================
+// PDF DAS LISTAGENS (logo · paisagem/retrato · totais)
+// =============================================
+var _pdfLancRows = [], _pdfLancAdiant = {};
+var _pdfPagRows = [], _pdfPagAdiant = {};
+var _pdfFinRows = [];
+
+function _txtSel(id) {
+  var el = document.getElementById(id);
+  if (!el || !el.value) return '';
+  return el.options[el.selectedIndex].text;
+}
+function _dataBR(d) {
+  if (!d) return '-';
+  var p = String(d).split('T')[0].split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
+}
+function _somaAdiant(map, id) {
+  return (map[id] || []).reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+}
+
+// cfg: { titulo, filtros:[str], colunas:[{t, d:'r'|'c'}], linhas:[[str]], rodape:[str] (linha de total), resumo:[{l,v}], orient }
+function gerarPdfListagem(cfg) {
+  if (!cfg.linhas.length) { toast('Nenhum registro no filtro para gerar o PDF.', 'error'); return; }
+  var w = window.open('', '_blank');
+  if (!w) { toast('Permita pop-ups do navegador para gerar o PDF.', 'error'); return; }
+  var agora = new Date();
+  var emitido = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  var al = function(c){ return c && c.d === 'r' ? ' class="r"' : (c && c.d === 'c' ? ' class="c"' : ''); };
+  var thead = '<tr>' + cfg.colunas.map(function(c){ return '<th' + al(c) + '>' + escAttr(c.t) + '</th>'; }).join('') + '</tr>';
+  var tbody = cfg.linhas.map(function(lin){
+    return '<tr>' + lin.map(function(v, i){ return '<td' + al(cfg.colunas[i]) + '>' + escAttr(v) + '</td>'; }).join('') + '</tr>';
+  }).join('');
+  var tfoot = cfg.rodape ? '<tr>' + cfg.rodape.map(function(v, i){ return '<td' + al(cfg.colunas[i]) + '>' + escAttr(v) + '</td>'; }).join('') + '</tr>' : '';
+  var resumo = (cfg.resumo || []).map(function(r){
+    return '<div class="box' + (r.destaque ? ' dest' : '') + '"><div class="bl">' + escAttr(r.l) + '</div><div class="bv">' + escAttr(r.v) + '</div></div>';
+  }).join('');
+  var filtros = (cfg.filtros || []).filter(Boolean);
+
+  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>' + escAttr(cfg.titulo) + ' - Termotelhas Weber</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">'
+    + '<style>'
+    + '@page { size: A4 ' + (cfg.orient === 'portrait' ? 'portrait' : 'landscape') + '; margin: 12mm; }'
+    + '*{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }'
+    + 'body{ font-family:Barlow,Arial,sans-serif; color:#1A1A1A; margin:0; font-size:11px; }'
+    + '.top{ display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #F5A623; padding-bottom:10px; margin-bottom:12px; }'
+    + '.marca{ display:flex; align-items:center; gap:12px; }'
+    + '.bars{ display:flex; gap:3px; } .bars span{ display:block; height:30px; transform:skewX(-15deg); border-radius:2px; }'
+    + '.b1{ width:14px; background:#F5A623; } .b2{ width:10px; background:#C0392B; } .b3{ width:7px; background:#888; }'
+    + '.nome{ font-family:"Barlow Condensed",sans-serif; font-size:22px; font-weight:800; letter-spacing:2px; line-height:1; }'
+    + '.nome small{ display:block; font-size:9px; letter-spacing:3px; color:#888; font-weight:600; margin-top:3px; }'
+    + '.tit{ text-align:right; } .tit h1{ font-family:"Barlow Condensed",sans-serif; font-size:18px; margin:0; letter-spacing:1px; text-transform:uppercase; }'
+    + '.tit div{ color:#777; font-size:10px; margin-top:2px; }'
+    + '.filtros{ font-size:10px; color:#555; margin-bottom:10px; } .filtros b{ color:#1A1A1A; }'
+    + '.resumo{ display:flex; gap:8px; margin-bottom:12px; } .box{ flex:1; border:1px solid #e3e3e3; border-left:4px solid #F5A623; border-radius:5px; padding:6px 10px; }'
+    + '.box.dest{ background:#fff8ee; } .bl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#888; } .bv{ font-family:"Barlow Condensed",sans-serif; font-size:17px; font-weight:700; }'
+    + 'table{ width:100%; border-collapse:collapse; } thead{ display:table-header-group; } tr{ page-break-inside:avoid; }'
+    + 'th{ background:#F5A623; color:#1A1A1A; text-align:left; font-size:9.5px; letter-spacing:.5px; text-transform:uppercase; padding:6px 7px; }'
+    + 'td{ padding:5px 7px; border-bottom:1px solid #eee; } tbody tr:nth-child(even) td{ background:#fafafa; }'
+    + 'tfoot td{ border-top:2px solid #1A1A1A; border-bottom:none; font-weight:700; background:#fff8ee; font-size:11.5px; }'
+    + '.r{ text-align:right; white-space:nowrap; } .c{ text-align:center; }'
+    + '.rod{ margin-top:12px; text-align:center; font-size:9px; color:#aaa; border-top:1px solid #eee; padding-top:6px; }'
+    + '</style></head><body>'
+    + '<div class="top"><div class="marca"><div class="bars"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>'
+    + '<div class="nome">TERMOTELHAS WEBER<small>SISTEMA DE GESTÃO</small></div></div>'
+    + '<div class="tit"><h1>' + escAttr(cfg.titulo) + '</h1><div>Emitido em ' + emitido + (usuarioLogado ? ' · ' + escAttr(usuarioLogado.nome) : '') + '</div></div></div>'
+    + (filtros.length ? '<div class="filtros"><b>Filtros:</b> ' + filtros.map(escAttr).join(' · ') + '</div>' : '<div class="filtros"><b>Filtros:</b> nenhum (todos os registros)</div>')
+    + (resumo ? '<div class="resumo">' + resumo + '</div>' : '')
+    + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody>' + (tfoot ? '<tfoot>' + tfoot + '</tfoot>' : '') + '</table>'
+    + '<div class="rod">Termotelhas Weber · ' + escAttr(cfg.titulo) + ' · ' + cfg.linhas.length + ' registro(s) · ' + emitido + '</div>'
+    + '<script>window.onload=function(){ setTimeout(function(){ window.focus(); window.print(); }, 400); };<\/script>'
+    + '</body></html>';
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+function pdfLancamentos() {
+  var rows = _pdfLancRows, map = _pdfLancAdiant;
+  var tot = 0, adi = 0;
+  var linhas = rows.map(function(l){
+    var a = _somaAdiant(map, l.id);
+    tot += parseFloat(l.valor_total||0); adi += a;
+    return [l.numero_pedido||'-', l.cliente_nome||'-', l.funcionario_nome||'-', l.tipo_servico||'-',
+      (l.quantidade||0) + ' ' + (l.unidade||''), fmtBRL(l.valor_unitario), fmtBRL(l.valor_total),
+      a > 0 ? fmtBRL(a) : '—', l.situacao||'Em andamento', _dataBR(l.data_inicio)];
+  });
+  var busca = (document.getElementById('filtro-lanc-busca').value||'').trim();
+  var pedido = (document.getElementById('filtro-lanc-pedido').value||'').trim();
+  var de = document.getElementById('filtro-lanc-data-de').value, ate = document.getElementById('filtro-lanc-data-ate').value;
+  var filtros = [
+    busca ? 'Pesquisa: ' + busca : '',
+    _txtSel('filtro-lanc-sit') ? 'Situação: ' + _txtSel('filtro-lanc-sit') : '',
+    (usuarioLogado && usuarioLogado.colaborador) ? 'Funcionário: ' + usuarioLogado.colaborador : (_txtSel('filtro-lanc-func') ? 'Funcionário: ' + _txtSel('filtro-lanc-func') : ''),
+    _txtSel('filtro-lanc-cli') ? 'Cliente: ' + _txtSel('filtro-lanc-cli') : '',
+    pedido ? 'Pedido: ' + pedido : '',
+    _txtSel('filtro-lanc-tipo') ? 'Serviço: ' + _txtSel('filtro-lanc-tipo') : '',
+    de || ate ? 'Início: ' + (de ? _dataBR(de) : '…') + ' a ' + (ate ? _dataBR(ate) : '…') : '',
+    _txtSel('filtro-lanc-mes') ? 'Mês: ' + _txtSel('filtro-lanc-mes') : '',
+    _txtSel('filtro-lanc-ano') ? 'Ano: ' + _txtSel('filtro-lanc-ano') : '',
+    Object.keys(_xfFiltros).length ? 'Filtros de coluna ativos' : ''
+  ];
+  gerarPdfListagem({
+    titulo: 'Relatório de Lançamentos',
+    orient: document.getElementById('pdf-orient-lanc').value,
+    filtros: filtros,
+    colunas: [{t:'Nº Pedido'},{t:'Cliente'},{t:'Funcionário'},{t:'Serviço'},{t:'Qtd/Un'},{t:'Valor Unit.',d:'r'},{t:'Total',d:'r'},{t:'Adiantado',d:'r'},{t:'Situação'},{t:'Início',d:'c'}],
+    linhas: linhas,
+    rodape: ['TOTAL', rows.length + ' lançamento(s)', '', '', '', '', fmtBRL(tot), fmtBRL(adi), '', ''],
+    resumo: [{l:'Lançamentos', v:String(rows.length)}, {l:'Total Lançado', v:fmtBRL(tot)}, {l:'Adiantado', v:fmtBRL(adi)}, {l:'Saldo (total − adiantado)', v:fmtBRL(Math.max(0, tot-adi)), destaque:true}]
+  });
+}
+
+function pdfPagamentos() {
+  var rows = _pdfPagRows, map = _pdfPagAdiant;
+  var tot = 0, pago = 0, adi = 0;
+  var linhas = rows.map(function(l){
+    var t = parseFloat(l.valor_total||0), p = parseFloat(l.valor_pago||0), a = _somaAdiant(map, l.id);
+    tot += t; pago += p; adi += a;
+    return [l.numero_pedido||'-', l.cliente_nome||'-', l.funcionario_nome||'-', l.tipo_servico||'-',
+      fmtBRL(t), a > 0 ? fmtBRL(a) : '—', p > 0 ? fmtBRL(p) : '—', fmtBRL(Math.max(0, t-p)),
+      _dataBR(l.data_fim), l.pagamento_status === 'parcial' ? 'Parcial' : 'A Pagar'];
+  });
+  gerarPdfListagem({
+    titulo: 'Relatório A Pagar',
+    orient: document.getElementById('pdf-orient-pag').value,
+    filtros: [
+      _txtSel('f-pag-mes') ? 'Mês: ' + _txtSel('f-pag-mes') : '',
+      _txtSel('f-pag-ano') ? 'Ano: ' + _txtSel('f-pag-ano') : '',
+      _txtSel('f-pag-func') ? 'Funcionário: ' + _txtSel('f-pag-func') : ''
+    ],
+    colunas: [{t:'Nº Pedido'},{t:'Cliente'},{t:'Funcionário'},{t:'Serviço'},{t:'Total',d:'r'},{t:'Adiantado',d:'r'},{t:'Já Pago',d:'r'},{t:'Saldo',d:'r'},{t:'Dt Conclusão',d:'c'},{t:'Status',d:'c'}],
+    linhas: linhas,
+    rodape: ['TOTAL', rows.length + ' lançamento(s)', '', '', fmtBRL(tot), fmtBRL(adi), fmtBRL(pago), fmtBRL(Math.max(0, tot-pago)), '', ''],
+    resumo: [{l:'Lançamentos', v:String(rows.length)}, {l:'Total Lançado', v:fmtBRL(tot)}, {l:'Adiantado', v:fmtBRL(adi)}, {l:'Saldo a Pagar', v:fmtBRL(Math.max(0, tot-pago)), destaque:true}]
+  });
+}
+
+function pdfFinalizados() {
+  var rows = _pdfFinRows, tot = 0;
+  var linhas = rows.map(function(l){
+    tot += parseFloat(l.valor_total||0);
+    return [l.numero_pedido||'-', l.cliente_nome||'-', l.funcionario_nome||'-', l.tipo_servico||'-',
+      (l.quantidade||0) + ' ' + (l.unidade||''), _dataBR(l.data_pagamento), l.forma_pagamento||'-', fmtBRL(l.valor_total)];
+  });
+  var nFunc = new Set(rows.map(function(l){ return l.funcionario_id || l.funcionario_nome || '-'; })).size;
+  gerarPdfListagem({
+    titulo: 'Pagamentos Finalizados',
+    orient: document.getElementById('pdf-orient-fin').value,
+    filtros: [
+      _txtSel('f-fin-mes') ? 'Mês: ' + _txtSel('f-fin-mes') : '',
+      _txtSel('f-fin-ano') ? 'Ano: ' + _txtSel('f-fin-ano') : '',
+      _txtSel('f-fin-func') ? 'Funcionário: ' + _txtSel('f-fin-func') : ''
+    ],
+    colunas: [{t:'Nº Pedido'},{t:'Cliente'},{t:'Funcionário'},{t:'Serviço'},{t:'Qtd/Un'},{t:'Dt Pagamento',d:'c'},{t:'Forma'},{t:'Valor Pago',d:'r'}],
+    linhas: linhas,
+    rodape: ['TOTAL', rows.length + ' pagamento(s)', '', '', '', '', '', fmtBRL(tot)],
+    resumo: [{l:'Pagamentos', v:String(rows.length)}, {l:'Funcionários', v:String(nFunc)}, {l:'Média por Obra', v:fmtBRL(rows.length ? tot/rows.length : 0)}, {l:'Total Pago', v:fmtBRL(tot), destaque:true}]
+  });
+}
+
+// =============================================
+// RANKING DE COLABORADORES
+// =============================================
+async function carregarRanking() {
+  var tb = document.getElementById('tb-ranking');
+  var tf = document.getElementById('tf-ranking');
+  tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#666;font-size:13px">⏳ Carregando...</td></tr>';
+  tf.innerHTML = '';
+  try {
+    var todos = await getLancamentos();
+    if (!_cacheColabs) {
+      _cacheColabs = (await sbGet('colaboradores', 'order=nome.asc&select=id,nome')).map(function(c){ return { id:c.id, nome:c.nome }; });
+    }
+    var mes = document.getElementById('rk-mes').value;
+    var ano = document.getElementById('rk-ano').value;
+    var ordem = document.getElementById('rk-ordem').value;
+
+    var lista = todos;
+    if (mes || ano) {
+      lista = todos.filter(function(l){
+        var dt = l.data_pagamento || l.data_fim || l.data_inicio || '';
+        if (!dt) return false;
+        var p = dt.split('-');
+        if (mes && p[1] !== mes.padStart(2,'0')) return false;
+        if (ano && p[0] !== ano) return false;
+        return true;
+      });
+    }
+
+    var mapa = {};
+    lista.forEach(function(l){
+      var chave = l.funcionario_id || ('nome:' + (l.funcionario_nome || 'Sem funcionário'));
+      if (!mapa[chave]) mapa[chave] = { nome: (l.funcionario_id && nomeColabPorId(l.funcionario_id)) || l.funcionario_nome || 'Sem funcionário',
+        aberto:0, apagar:0, pago:0, total:0, nAberto:0, nApagar:0, nPago:0 };
+      var r = mapa[chave];
+      var t = parseFloat(l.valor_total||0), vp = parseFloat(l.valor_pago||0);
+      if (l.pagamento_status === 'pago') { r.pago += t; r.nPago++; }
+      else if (l.situacao === 'Concluído') {
+        // parcial: parte paga entra em "pago", saldo em "a pagar"
+        var jaPago = l.pagamento_status === 'parcial' ? Math.min(vp, t) : 0;
+        r.pago += jaPago; r.apagar += (t - jaPago); r.nApagar++;
+      } else { r.aberto += t; r.nAberto++; }
+      r.total += t;
+    });
+
+    var linhas = Object.keys(mapa).map(function(k){ return mapa[k]; });
+    linhas.sort(function(a,b){ return (b[ordem] - a[ordem]) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+
+    var S = linhas.reduce(function(s,r){ s.aberto+=r.aberto; s.apagar+=r.apagar; s.pago+=r.pago; s.total+=r.total; return s; }, {aberto:0,apagar:0,pago:0,total:0});
+    document.getElementById('rk-s-aberto').textContent = fmtBRL(S.aberto);
+    document.getElementById('rk-s-apagar').textContent = fmtBRL(S.apagar);
+    document.getElementById('rk-s-pago').textContent = fmtBRL(S.pago);
+    document.getElementById('rk-s-total').textContent = fmtBRL(S.total);
+    document.getElementById('rk-s-colabs').textContent = linhas.length + ' colaborador(es)';
+
+    if (!linhas.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">🏆</div><p>Nenhum lançamento no período.</p></td></tr>'; return; }
+
+    var maior = Math.max.apply(null, linhas.map(function(r){ return r[ordem]; })) || 1;
+    var medalha = ['🥇','🥈','🥉'];
+    var cel = function(v, n, cor){ return '<td style="text-align:right"><span class="rank-val" style="color:' + (v > 0 ? cor : '#555') + '">' + fmtBRL(v) + '</span><span class="rank-qtd">' + n + ' obra(s)</span></td>'; };
+    tb.innerHTML = linhas.map(function(r, i){
+      return '<tr>'
+        + '<td><span class="rank-pos' + (i < 3 ? ' p' + (i+1) : '') + '">' + (i < 3 ? medalha[i] : (i+1) + 'º') + '</span></td>'
+        + '<td><strong style="color:#EEE">' + escAttr(r.nome) + '</strong><div class="rank-bar"><span style="width:' + Math.max(2, Math.round(r[ordem] / maior * 100)) + '%"></span></div></td>'
+        + cel(r.aberto, r.nAberto, '#5dade2')
+        + cel(r.apagar, r.nApagar, '#f8c471')
+        + cel(r.pago, r.nPago, '#58d68d')
+        + '<td style="text-align:right"><span class="rank-val" style="color:var(--amarelo);font-size:14px">' + fmtBRL(r.total) + '</span><span class="rank-qtd">' + (r.nAberto + r.nApagar + r.nPago) + ' obra(s)</span></td>'
+        + '</tr>';
+    }).join('');
+    tf.innerHTML = '<tr><td></td><td>TOTAL GERAL</td>'
+      + '<td style="text-align:right">' + fmtBRL(S.aberto) + '</td>'
+      + '<td style="text-align:right">' + fmtBRL(S.apagar) + '</td>'
+      + '<td style="text-align:right">' + fmtBRL(S.pago) + '</td>'
+      + '<td style="text-align:right;color:var(--amarelo)">' + fmtBRL(S.total) + '</td></tr>';
+  } catch(e) {
+    tb.innerHTML = '';
+    toast('Erro ao carregar ranking: ' + e.message, 'error');
+  }
 }
 
 // =============================================
