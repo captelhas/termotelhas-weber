@@ -745,7 +745,10 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
         <div class="stat-card red"><div class="label">Saldo a Pagar</div><div class="value" id="sp-saldo">R$ 0,00</div><div class="sub">total − já pago</div></div>
       </div>
       <div class="toolbar">
-        <div class="toolbar-left"></div>
+        <div class="toolbar-left">
+          <button class="btn btn-success" id="btn-pagar-lote" onclick="abrirPagarLote()" style="display:none">💰 Pagar selecionados</button>
+          <span id="pag-sel-info" style="font-size:12px;color:#888"></span>
+        </div>
         <div class="pdf-bar">
           <select id="pdf-orient-pag" title="Orientação do PDF"><option value="landscape">Paisagem</option><option value="portrait">Retrato</option></select>
           <button class="btn btn-ghost" onclick="pdfPagamentos()">📄 Gerar PDF</button>
@@ -754,7 +757,7 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Funcionário</th><th>Total</th><th>Adiantamento</th><th>Dt Conclusão</th><th>Status</th><th>Ações</th></tr></thead>
+            <thead><tr><th style="width:36px"><input type="checkbox" id="pag-sel-todos" onchange="pagSelTodos(this.checked)" title="Selecionar todos" style="width:16px;height:16px;accent-color:var(--amarelo);cursor:pointer"></th><th>Nº Pedido</th><th>Cliente</th><th>Funcionário</th><th>Total</th><th>Adiantamento</th><th>Dt Conclusão</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody id="tb-pagamentos"></tbody>
           </table>
         </div>
@@ -1113,6 +1116,36 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-pagar')">Cancelar</button>
       <button class="btn btn-success" onclick="confirmarPagamento()">✅ Confirmar Pagamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Pagamento em Lote -->
+<div class="modal-overlay" id="modal-pagar-lote">
+  <div class="modal" style="max-width:760px">
+    <button class="modal-close" onclick="fecharModal('modal-pagar-lote')" title="Fechar">✕</button>
+    <h3>💰 Pagamento em Lote</h3>
+    <div id="mpl-lista" style="margin-bottom:16px"></div>
+    <div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:14px 16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#888" id="mpl-qtd">0 lançamentos</span>
+      <span id="mpl-total" style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:var(--amarelo)">R$ 0,00</span>
+    </div>
+    <div class="form-row cols-3">
+      <div class="field"><label>Data do Pagamento</label><input type="date" id="mpl-data" /></div>
+      <div class="field"><label>Forma de Pagamento</label>
+        <select id="mpl-forma">
+          <option>Dinheiro</option><option>PIX</option><option>Transferência</option>
+          <option>Cheque</option><option>Cartão</option>
+        </select>
+      </div>
+      <div class="field"><label>Observação</label><input id="mpl-obs" placeholder="Opcional" /></div>
+    </div>
+    <div style="background:#1a1a1a;border-radius:8px;padding:11px 14px;font-size:12px;color:#888">
+      ✅ Cada lançamento selecionado será quitado pelo seu saldo e marcado como <strong>Pago</strong>.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-pagar-lote')">Cancelar</button>
+      <button class="btn btn-success" id="mpl-btn-confirmar" onclick="confirmarPagamentoLote()">✅ Confirmar Pagamento</button>
     </div>
   </div>
 </div>
@@ -2359,7 +2392,8 @@ async function salvarLanc() {
 // =============================================
 async function carregarPagamentos() {
   const tb = document.getElementById('tb-pagamentos');
-  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#666;font-size:13px">⏳ Carregando...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#666;font-size:13px">⏳ Carregando...</td></tr>';
+  _pagSelecionados.clear(); atualizarSelPag();
   await preencherFiltroFuncs('f-pag-func');
   const todos = await getLancamentos();
   const mes = document.getElementById('f-pag-mes').value;
@@ -2403,7 +2437,7 @@ async function carregarPagamentos() {
     document.getElementById('sp-saldo').textContent = fmtBRL(Math.max(0, tot - pago));
   })();
 
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">💰</div><p>Nenhum lançamento a pagar.</p></td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon">💰</div><p>Nenhum lançamento a pagar.</p></td></tr>'; return; }
 
   tb.innerHTML = rows.map(l => {
     const total = parseFloat(l.valor_total||0);
@@ -2431,6 +2465,7 @@ async function carregarPagamentos() {
       : '<strong style="color:var(--amarelo)">R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</strong>';
 
     return '<tr data-id="' + l.id + '">'
+      + '<td><input type="checkbox" class="pag-sel" value="' + l.id + '" onchange="togglePagSel(this)" style="width:16px;height:16px;accent-color:var(--amarelo);cursor:pointer"></td>'
       + '<td><strong>' + (l.numero_pedido||'-') + '</strong></td>'
       + '<td>' + (l.cliente_nome||'-') + '</td>'
       + '<td>' + (l.funcionario_nome||'-') + '</td>'
@@ -2443,10 +2478,120 @@ async function carregarPagamentos() {
       + (isParcial ? '<button class="btn btn-ghost btn-sm" onclick="gerarReciboParcial(\'' + l.id + '\')" title="Gerar recibo" style="color:var(--amarelo)">🧾</button>' : '')
       + (isParcial ? '<button class="btn btn-ghost btn-sm" onclick="abrirReverterParcial(\'' + l.id + '\')" title="Reverter parcela" style="color:#e74c3c">↩️</button>' : '')
       + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + l.id + '\')" title="Editar">✏️</button>'
-      + '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-pagamentos\',8)" title="Excluir">🗑️</button>'
+      + '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-pagamentos\',9)" title="Excluir">🗑️</button>'
       + '</td>'
       + '</tr>';
   }).join('');
+}
+
+// ---------------------------------------------
+// PAGAMENTO EM LOTE (vários colaboradores/serviços)
+// ---------------------------------------------
+var _pagSelecionados = new Set();
+
+function togglePagSel(cb) {
+  if (cb.checked) _pagSelecionados.add(cb.value); else _pagSelecionados.delete(cb.value);
+  atualizarSelPag();
+}
+function pagSelTodos(on) {
+  document.querySelectorAll('#tb-pagamentos .pag-sel').forEach(function(cb){
+    cb.checked = on;
+    if (on) _pagSelecionados.add(cb.value); else _pagSelecionados.delete(cb.value);
+  });
+  atualizarSelPag();
+}
+function _saldoLancPag(l) {
+  return Math.max(0, parseFloat(l.valor_total||0) - parseFloat(l.valor_pago||0));
+}
+function atualizarSelPag() {
+  var btn = document.getElementById('btn-pagar-lote');
+  var info = document.getElementById('pag-sel-info');
+  var todosCb = document.getElementById('pag-sel-todos');
+  var n = _pagSelecionados.size;
+  var rows = (_pdfPagRows || []).filter(function(l){ return _pagSelecionados.has(l.id); });
+  var soma = rows.reduce(function(s,l){ return s + _saldoLancPag(l); }, 0);
+  var funcs = new Set(rows.map(function(l){ return l.funcionario_id || l.funcionario_nome; })).size;
+  if (btn) { btn.style.display = n ? '' : 'none'; btn.textContent = '💰 Pagar selecionados (' + n + ')'; }
+  if (info) info.textContent = n ? (n + ' lançamento(s) · ' + funcs + ' colaborador(es) · ' + fmtBRL(soma)) : '';
+  if (todosCb) {
+    var cbs = document.querySelectorAll('#tb-pagamentos .pag-sel');
+    todosCb.checked = cbs.length > 0 && Array.from(cbs).every(function(c){ return c.checked; });
+  }
+}
+
+function abrirPagarLote() {
+  var rows = (_pdfPagRows || []).filter(function(l){ return _pagSelecionados.has(l.id); });
+  if (!rows.length) { toast('Selecione ao menos um lançamento.','error'); return; }
+  // Agrupa por colaborador
+  var grupos = {};
+  rows.forEach(function(l){
+    var k = l.funcionario_nome || 'Sem funcionário';
+    if (!grupos[k]) grupos[k] = [];
+    grupos[k].push(l);
+  });
+  var total = 0;
+  var html = Object.keys(grupos).sort().map(function(fn){
+    var sub = 0;
+    var itens = grupos[fn].map(function(l){
+      var sd = _saldoLancPag(l); sub += sd;
+      return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#AAA;padding:3px 0">'
+        + '<span>Pedido ' + escAttr(l.numero_pedido||'-') + ' · ' + escAttr(l.cliente_nome||'-') + ' · ' + escAttr(l.tipo_servico||'-')
+        + (l.pagamento_status === 'parcial' ? ' <span style="color:#f5a623">(saldo parcial)</span>' : '') + '</span>'
+        + '<span style="color:#EEE">' + fmtBRL(sd) + '</span></div>';
+    }).join('');
+    total += sub;
+    return '<div style="background:#222;border:1px solid #333;border-radius:8px;padding:12px 14px;margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><strong style="color:#EEE">👷 ' + escAttr(fn) + '</strong>'
+      + '<strong style="color:var(--amarelo)">' + fmtBRL(sub) + '</strong></div>' + itens + '</div>';
+  }).join('');
+  document.getElementById('mpl-lista').innerHTML = html;
+  document.getElementById('mpl-qtd').textContent = rows.length + ' lançamento(s) · ' + Object.keys(grupos).length + ' colaborador(es)';
+  document.getElementById('mpl-total').textContent = fmtBRL(total);
+  document.getElementById('mpl-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mpl-obs').value = '';
+  document.getElementById('mpl-btn-confirmar').disabled = false;
+  abrirModal('modal-pagar-lote');
+}
+
+async function confirmarPagamentoLote() {
+  var rows = (_pdfPagRows || []).filter(function(l){ return _pagSelecionados.has(l.id); });
+  if (!rows.length) return;
+  var dtPag = document.getElementById('mpl-data').value;
+  var forma = document.getElementById('mpl-forma').value;
+  var obs = document.getElementById('mpl-obs').value;
+  var btn = document.getElementById('mpl-btn-confirmar');
+  btn.disabled = true;
+  toast('Registrando pagamentos...','info');
+  var ok = 0, erros = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var l = rows[i];
+    var saldo = _saldoLancPag(l);
+    try {
+      if (saldo > 0) {
+        var r = await fetch(SUPABASE_URL + '/rest/v1/pagamentos_parciais', {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+            'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ lancamento_id: l.id, valor: saldo, data_pagamento: dtPag, forma: forma, obs: obs })
+        });
+        if (!r.ok) throw new Error(await r.text());
+      }
+      await sbUpdate('lancamentos', l.id, {
+        pagamento_status: 'pago',
+        valor_pago: parseFloat(l.valor_total||0),
+        data_pagamento: dtPag,
+        forma_pagamento: forma,
+        obs_pagamento: obs
+      });
+      ok++;
+    } catch(e) { erros++; console.warn('Pagamento lote', l.id, e.message); }
+  }
+  fecharModal('modal-pagar-lote');
+  _pagSelecionados.clear();
+  invalidarCacheLanc();
+  if (erros) toast(ok + ' pago(s), ' + erros + ' com erro.', 'error');
+  else toast(ok + ' lançamento(s) pago(s)! ✅');
+  carregarPagamentos();
 }
 
 async function abrirPagar(id) {
@@ -2566,7 +2711,7 @@ async function confirmarPagamento() {
     if (tbPag && tbPag.querySelectorAll('tr[data-id]').length <= 1) {
       setTimeout(function(){
         if (tbPag.querySelectorAll('tr[data-id]').length === 0)
-          tbPag.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">&#128176;</div><p>Nenhum lan&ccedil;amento a pagar.</p></td></tr>';
+          tbPag.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon">&#128176;</div><p>Nenhum lan&ccedil;amento a pagar.</p></td></tr>';
       }, 500);
     }
     sbUpdate('lancamentos', id, payload)
