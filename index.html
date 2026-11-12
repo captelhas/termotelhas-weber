@@ -116,6 +116,11 @@ body { font-family:'Barlow',sans-serif; background:#111; color:#EEE; min-height:
 .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--amarelo); }
 .field select option { background:#222; }
 .field input[readonly] { background:#1a1a1a; color:var(--amarelo); }
+/* Data de compra (destaque em outra cor) */
+.field-compra label { color:#48c9b0; }
+.field-compra input { border-color:rgba(26,188,156,0.55); color:#48c9b0; background:rgba(26,188,156,0.07); }
+.field-compra input:focus { border-color:#1abc9c; }
+.dt-compra { color:#48c9b0; font-weight:600; white-space:nowrap; }
 
 /* Botões */
 .btn { padding:10px 20px; border-radius:6px; border:none; cursor:pointer; font-size:13px; font-weight:600; letter-spacing:.5px; transition:all .2s; display:inline-flex; align-items:center; gap:6px; }
@@ -672,7 +677,7 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th><div class="xf-th">Nº Pedido<button type="button" class="xf-btn" id="xf-btn-pedido" onclick="abrirFiltroColuna(event,'pedido')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Cliente<button type="button" class="xf-btn" id="xf-btn-cliente" onclick="abrirFiltroColuna(event,'cliente')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Funcionário<button type="button" class="xf-btn" id="xf-btn-func" onclick="abrirFiltroColuna(event,'func')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Tipo Serviço<button type="button" class="xf-btn" id="xf-btn-tipo" onclick="abrirFiltroColuna(event,'tipo')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Qtd<button type="button" class="xf-btn" id="xf-btn-qtd" onclick="abrirFiltroColuna(event,'qtd')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Un<button type="button" class="xf-btn" id="xf-btn-un" onclick="abrirFiltroColuna(event,'un')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Valor Unit.<button type="button" class="xf-btn" id="xf-btn-vunit" onclick="abrirFiltroColuna(event,'vunit')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Total<button type="button" class="xf-btn" id="xf-btn-total" onclick="abrirFiltroColuna(event,'total')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Adiantamento<button type="button" class="xf-btn" id="xf-btn-adiant" onclick="abrirFiltroColuna(event,'adiant')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Situação<button type="button" class="xf-btn" id="xf-btn-sit" onclick="abrirFiltroColuna(event,'sit')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Lead Time<button type="button" class="xf-btn" id="xf-btn-lead" onclick="abrirFiltroColuna(event,'lead')" title="Filtrar">▾</button></div></th><th>Crono</th><th><div class="xf-th">Início<button type="button" class="xf-btn" id="xf-btn-inicio" onclick="abrirFiltroColuna(event,'inicio')" title="Filtrar">▾</button></div></th><th>Ações</th></tr></thead>
+            <thead><tr><th><div class="xf-th">Nº Pedido<button type="button" class="xf-btn" id="xf-btn-pedido" onclick="abrirFiltroColuna(event,'pedido')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Cliente<button type="button" class="xf-btn" id="xf-btn-cliente" onclick="abrirFiltroColuna(event,'cliente')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Funcionário<button type="button" class="xf-btn" id="xf-btn-func" onclick="abrirFiltroColuna(event,'func')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Tipo Serviço<button type="button" class="xf-btn" id="xf-btn-tipo" onclick="abrirFiltroColuna(event,'tipo')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Qtd<button type="button" class="xf-btn" id="xf-btn-qtd" onclick="abrirFiltroColuna(event,'qtd')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Un<button type="button" class="xf-btn" id="xf-btn-un" onclick="abrirFiltroColuna(event,'un')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Valor Unit.<button type="button" class="xf-btn" id="xf-btn-vunit" onclick="abrirFiltroColuna(event,'vunit')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Total<button type="button" class="xf-btn" id="xf-btn-total" onclick="abrirFiltroColuna(event,'total')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Adiantamento<button type="button" class="xf-btn" id="xf-btn-adiant" onclick="abrirFiltroColuna(event,'adiant')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Situação<button type="button" class="xf-btn" id="xf-btn-sit" onclick="abrirFiltroColuna(event,'sit')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Lead Time<button type="button" class="xf-btn" id="xf-btn-lead" onclick="abrirFiltroColuna(event,'lead')" title="Filtrar">▾</button></div></th><th>Crono</th><th><div class="xf-th">Início<button type="button" class="xf-btn" id="xf-btn-inicio" onclick="abrirFiltroColuna(event,'inicio')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Fim<button type="button" class="xf-btn" id="xf-btn-fim" onclick="abrirFiltroColuna(event,'fim')" title="Filtrar">▾</button></div></th><th><div class="xf-th" style="color:#48c9b0">Compra<button type="button" class="xf-btn" id="xf-btn-compra" onclick="abrirFiltroColuna(event,'compra')" title="Filtrar">▾</button></div></th><th>Ações</th></tr></thead>
             <tbody id="tb-lancamentos"></tbody>
           </table>
         </div>
@@ -1036,7 +1041,8 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
         </select>
       </div>
     </div>
-    <div class="form-row cols-3">
+    <div class="form-row cols-4">
+      <div class="field field-compra"><label>Data Compra</label><input type="date" id="ml-compra" /></div>
       <div class="field"><label>Data Início</label><input type="date" id="ml-inicio" /></div>
       <div class="field"><label>Data Fim</label><input type="date" id="ml-fim" /></div>
       <div class="field"><label>Produto (padrão da ordem)</label>
@@ -1311,6 +1317,8 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
 // =============================================
 // ATENÇÃO: Para usar pagamentos parciais, execute no Supabase SQL Editor:
 //   ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS valor_pago numeric DEFAULT 0;
+// Para a Data de Compra:
+//   ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS data_compra date;
 // =============================================
 const SUPABASE_URL = "https://bavzjtypkrkzrkhklymm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhdnpqdHlwa3JrenJraGtseW1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjEyMTEsImV4cCI6MjA5NDc5NzIxMX0.hMFLrQCz-0N1IlwGnswi4IQsbNGd247SY6aiWY31ors";
@@ -2017,7 +2025,7 @@ async function carregarLancamentos() {
       document.getElementById('sl-saldo').textContent = fmtBRL(Math.max(0, tot - adi));
     })();
 
-    if (!docs.length) { tb.innerHTML = '<tr><td colspan="14" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>'; return; }
+    if (!docs.length) { tb.innerHTML = '<tr><td colspan="16" class="empty-state"><div class="icon">&#128203;</div><p>Nenhum lan&ccedil;amento.</p></td></tr>'; return; }
 
     tb.innerHTML = docs.map(function(l) {
       var totalFmt = 'R$ ' + parseFloat(l.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -2081,6 +2089,8 @@ async function carregarLancamentos() {
         + '<td>' + leadCell + '</td>'
         + '<td style="white-space:nowrap">' + cronoCell + '</td>'
         + '<td>' + (l.data_inicio||'-') + '</td>'
+        + '<td>' + (l.data_fim||'-') + '</td>'
+        + '<td>' + (l.data_compra ? '<span class="dt-compra">' + l.data_compra + '</span>' : '-') + '</td>'
         + '<td>'
         + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">'
         + '<button class="btn btn-ghost btn-sm" onclick="editarLanc(\'' + l.id + '\')" title="Editar lançamento" style="padding:5px 8px">✏️</button>'
@@ -2088,7 +2098,7 @@ async function carregarLancamentos() {
         + (!isTecnico ? '<span style="width:1px;background:#3d3d3d;height:20px;display:inline-block;margin:0 2px"></span>' : '')
         + (!isTecnico ? '<button class="btn btn-sm" onclick="abrirAdiantamento(\'' + l.id + '\')" title="Registrar adiantamento" style="background:rgba(41,128,185,0.15);border:1px solid rgba(41,128,185,0.4);color:#5dade2;padding:5px 8px;white-space:nowrap">💵 Adianto</button>' : '')
         + (!isTecnico ? '<span style="width:1px;background:#3d3d3d;height:20px;display:inline-block;margin:0 2px"></span>' : '')
-        + (!isTecnico ? '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-lancamentos\',14)" title="Excluir lançamento" style="padding:5px 8px">🗑️</button>' : '')
+        + (!isTecnico ? '<button class="btn btn-danger btn-sm" onclick="excluirLanc(\'' + l.id + '\',\'tb-lancamentos\',16)" title="Excluir lançamento" style="padding:5px 8px">🗑️</button>' : '')
         + '</div>'
         + '</td>'
         + '</tr>';
@@ -2225,7 +2235,7 @@ function atualizarTotaisFunc() {
 }
 
 async function abrirModalLanc() {
-  ['ml-id','ml-pedido','ml-obs','ml-inicio','ml-fim'].forEach(f => document.getElementById(f).value = '');
+  ['ml-id','ml-pedido','ml-obs','ml-compra','ml-inicio','ml-fim'].forEach(f => document.getElementById(f).value = '');
   document.getElementById('ml-sit').value = 'Em andamento';
   document.getElementById('ml-titulo').textContent = 'Novo Lançamento';
   _prodPadrao = { un:'', valor:'' };
@@ -2262,6 +2272,7 @@ async function editarLanc(id) {
   document.getElementById('ml-id').value = id;
   document.getElementById('ml-cliente').value = l.cliente_id || '';
   document.getElementById('ml-pedido').value = l.numero_pedido || '';
+  document.getElementById('ml-compra').value = l.data_compra || '';
   document.getElementById('ml-inicio').value = l.data_inicio || '';
   document.getElementById('ml-fim').value = l.data_fim || '';
   document.getElementById('ml-sit').value = l.situacao || 'Em andamento';
@@ -2342,6 +2353,7 @@ async function salvarLanc() {
     cliente_id: clienteId,
     cliente_nome: selCli.options[selCli.selectedIndex].text,
     numero_pedido: pedido,
+    data_compra: document.getElementById('ml-compra').value || null,
     data_inicio: document.getElementById('ml-inicio').value || null,
     data_fim: document.getElementById('ml-fim').value || null,
     situacao: sit,
@@ -3053,6 +3065,8 @@ function valorColunaLanc(l, col) {
       var dias = Math.max(0, Math.round((_xfCtx.hoje - new Date(ref + 'T12:00:00')) / 86400000));
       v = dias === 0 ? 'Hoje' : (dias === 1 ? '1 dia' : dias + ' dias'); break;
     case 'inicio':  v = l.data_inicio; break;
+    case 'fim':     v = l.data_fim; break;
+    case 'compra':  v = l.data_compra; break;
     default: v = '';
   }
   v = (v == null ? '' : String(v)).trim();
@@ -3070,6 +3084,8 @@ function _xfChave(l, col) {
       var ref = l.data_inicio || (l.criado_em ? l.criado_em.split('T')[0] : '');
       return ref ? -new Date(ref + 'T12:00:00').getTime() : 0;
     case 'inicio': return l.data_inicio || '';
+    case 'fim':    return l.data_fim || '';
+    case 'compra': return l.data_compra || '';
     default: return valorColunaLanc(l, col).toLowerCase();
   }
 }
