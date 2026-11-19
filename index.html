@@ -470,6 +470,7 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
     <div class="nav-group">
       <div class="nav-label">Administração</div>
       <div class="nav-item" id="nav-permissoes" data-tela="permissoes" onclick="irPara('permissoes')"><span class="icon">🔐</span> Permissões</div>
+      <div class="nav-item" data-tela="backup" onclick="irPara('backup')"><span class="icon">💾</span> Backup</div>
     </div>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sidebar-user">Admin</strong><span id="sidebar-perfil">Administrador</span></div>
@@ -762,7 +763,7 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th style="width:36px"><input type="checkbox" id="pag-sel-todos" onchange="pagSelTodos(this.checked)" title="Selecionar todos" style="width:16px;height:16px;accent-color:var(--amarelo);cursor:pointer"></th><th>Nº Pedido</th><th>Cliente</th><th>Funcionário</th><th>Total</th><th>Adiantamento</th><th>Dt Conclusão</th><th>Status</th><th>Ações</th></tr></thead>
+            <thead><tr><th style="width:36px"><input type="checkbox" id="pag-sel-todos" onchange="pagSelTodos(this.checked)" title="Selecionar todos" style="width:16px;height:16px;accent-color:var(--amarelo);cursor:pointer"></th><th><div class="xf-th">Nº Pedido<button type="button" class="xf-btn" id="xfp-btn-pedido" onclick="abrirFiltroColuna(event,'pedido','pag')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Cliente<button type="button" class="xf-btn" id="xfp-btn-cliente" onclick="abrirFiltroColuna(event,'cliente','pag')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Funcionário<button type="button" class="xf-btn" id="xfp-btn-func" onclick="abrirFiltroColuna(event,'func','pag')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Total<button type="button" class="xf-btn" id="xfp-btn-total" onclick="abrirFiltroColuna(event,'total','pag')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Adiantamento<button type="button" class="xf-btn" id="xfp-btn-adiant" onclick="abrirFiltroColuna(event,'adiant','pag')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Dt Conclusão<button type="button" class="xf-btn" id="xfp-btn-fim" onclick="abrirFiltroColuna(event,'fim','pag')" title="Filtrar">▾</button></div></th><th><div class="xf-th">Status<button type="button" class="xf-btn" id="xfp-btn-status" onclick="abrirFiltroColuna(event,'status','pag')" title="Filtrar">▾</button></div></th><th>Ações</th></tr></thead>
             <tbody id="tb-pagamentos"></tbody>
           </table>
         </div>
@@ -910,6 +911,53 @@ th .xf-th { display:flex; align-items:center; gap:6px; white-space:nowrap; }
         <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">+ Novo Usuário</button>
       </div>
       <div id="perm-container"></div>
+    </div>
+
+    <!-- TELA DE BACKUP -->
+    <div class="tela" id="t-backup">
+      <div class="page-header"><h2>💾 Backup</h2><p>Cópia de segurança dos dados do sistema em uma pasta deste computador</p></div>
+      <div id="bkp-aviso-suporte" class="card" style="display:none;border-left:3px solid #e74c3c;margin-bottom:15px;font-size:13px;color:#ddd">
+        ⚠️ Este navegador não permite gravar direto em uma pasta. Use <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong>.
+        Enquanto isso, os backups são baixados para a pasta <em>Downloads</em>.
+      </div>
+      <div class="form-row cols-2">
+        <div class="card">
+          <h3 style="font-size:14px;margin-bottom:12px">📁 Pasta de destino</h3>
+          <div style="font-size:13px;margin-bottom:6px">Pasta: <strong id="bkp-pasta-nome" style="color:var(--amarelo)">Nenhuma pasta selecionada</strong></div>
+          <div style="font-size:12px;color:#888;margin-bottom:14px" id="bkp-pasta-status"></div>
+          <button class="btn btn-primary" onclick="escolherPastaBackup()">📁 Escolher pasta</button>
+          <button class="btn btn-ghost" id="bkp-btn-autorizar" onclick="autorizarPastaBackup()" style="display:none">🔓 Autorizar acesso</button>
+        </div>
+        <div class="card">
+          <h3 style="font-size:14px;margin-bottom:12px">⏰ Agendamento</h3>
+          <div class="form-row cols-2" style="margin-bottom:10px">
+            <div class="field"><label>Backup automático diário</label>
+              <select id="bkp-ativo"><option value="1">Ativado</option><option value="0">Desativado</option></select>
+            </div>
+            <div class="field"><label>Horário</label><input type="time" id="bkp-horario" value="18:00" /></div>
+          </div>
+          <button class="btn btn-primary" onclick="salvarConfigBackup()">Salvar agendamento</button>
+          <div style="font-size:12px;color:#888;margin-top:10px" id="bkp-proximo"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:15px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <h3 style="font-size:14px">🗂️ Histórico</h3>
+          <button class="btn btn-success" id="bkp-btn-agora" onclick="executarBackup('manual')">💾 Fazer backup agora</button>
+        </div>
+        <div style="font-size:13px;margin-bottom:10px">Último backup: <strong id="bkp-ultimo">—</strong></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Arquivo</th><th>Registros</th><th>Resultado</th></tr></thead>
+            <tbody id="tb-backup-log"></tbody>
+          </table>
+        </div>
+        <p style="font-size:11px;color:#777;margin-top:12px">
+          O backup automático roda enquanto o sistema estiver aberto neste computador. Se o horário passar com o sistema fechado,
+          o backup é feito assim que o sistema for aberto no mesmo dia. Cada backup gera um arquivo .json com todas as tabelas
+          (lançamentos, colaboradores, clientes, produtos, situações, adiantamentos e pagamentos parciais).
+        </p>
+      </div>
     </div>
 
   </div><!-- /main -->
@@ -1436,12 +1484,13 @@ const TELAS_DISPONIVEIS = [
   { id: 'pagamentos',    label: '💰 A Pagar' },
   { id: 'finalizados',   label: '✅ Pago / Finalizado' },
   { id: 'recibo',        label: '🧾 Recibo' },
-  { id: 'permissoes',    label: '🔐 Permissões', apenasAdmin: true }
+  { id: 'permissoes',    label: '🔐 Permissões', apenasAdmin: true },
+  { id: 'backup',        label: '💾 Backup', apenasAdmin: true }
 ];
 
 // PERMISSÕES PADRÃO POR PERFIL
 const PERMISSOES_PADRAO = {
-  admin:      ['dashboard','ranking','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo','permissoes'],
+  admin:      ['dashboard','ranking','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo','permissoes','backup'],
   gerente:    ['dashboard','ranking','colaboradores','clientes','produtos','situacoes','lancamentos','calendario','pagamentos','finalizados','recibo'],
   tecnico01:  ['lancamentos','calendario'],
   tecnico02:  ['lancamentos','calendario'],
@@ -1556,7 +1605,8 @@ function irPara(tela) {
     'pagamentos': carregarPagamentos,
     'finalizados': carregarFinalizados,
     'recibo': carregarRecibo,
-    'permissoes': carregarPermissoes
+    'permissoes': carregarPermissoes,
+    'backup': carregarBackup
   };
   if (loaders[tela]) loaders[tela]();
 }
@@ -1581,6 +1631,7 @@ async function inicializar() {
   } catch(e) {}
   carregarDashboard();
   seedSituacoes();
+  iniciarAgendadorBackup();
 }
 
 function aplicarPermissoesSidebar() {
@@ -1591,6 +1642,202 @@ function aplicarPermissoesSidebar() {
   const perfilLabel = { admin:'Administrador', gerente:'Gerente', tecnico01:'Técnico 01', tecnico02:'Técnico 02', financeiro:'Financeiro' };
   const el = document.getElementById('sidebar-perfil');
   if (el) el.textContent = perfilLabel[usuarioLogado.perfil] || usuarioLogado.perfil;
+}
+
+// =============================================
+// BACKUP (pasta local + agendamento diário)
+// =============================================
+const BKP_TABELAS = ['lancamentos','colaboradores','clientes','produtos','situacoes','adiantamentos','pagamentos_parciais'];
+const BKP_CFG_KEY = 'tw_backup_cfg';
+const BKP_SUPORTA_PASTA = typeof window.showDirectoryPicker === 'function';
+let _bkpRodando = false;
+let _bkpTimer = null;
+
+function _bkpCfg() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(BKP_CFG_KEY) || '{}') || {}; } catch(e) {}
+  if (c.ativo === undefined) c.ativo = false;
+  if (!c.horario) c.horario = '18:00';
+  if (!Array.isArray(c.log)) c.log = [];
+  return c;
+}
+function _bkpSalvarCfg(c) { localStorage.setItem(BKP_CFG_KEY, JSON.stringify(c)); }
+function _bkpHojeISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function _bkpDataHoraBR(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+}
+
+// Guarda a pasta escolhida (IndexedDB, pois não cabe no localStorage)
+function _bkpDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('tw_backup', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('h');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function _bkpSetPasta(h) {
+  const db = await _bkpDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('h', 'readwrite');
+    tx.objectStore('h').put(h, 'pasta');
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function _bkpGetPasta() {
+  try {
+    const db = await _bkpDB();
+    return await new Promise((res) => {
+      const r = db.transaction('h', 'readonly').objectStore('h').get('pasta');
+      r.onsuccess = () => res(r.result || null);
+      r.onerror = () => res(null);
+    });
+  } catch(e) { return null; }
+}
+async function _bkpPermissao(h, pedir) {
+  if (!h) return 'sem-pasta';
+  try {
+    let p = await h.queryPermission({ mode: 'readwrite' });
+    if (p !== 'granted' && pedir) p = await h.requestPermission({ mode: 'readwrite' });
+    return p;
+  } catch(e) { return 'denied'; }
+}
+
+async function carregarBackup() {
+  const c = _bkpCfg();
+  document.getElementById('bkp-aviso-suporte').style.display = BKP_SUPORTA_PASTA ? 'none' : '';
+  document.getElementById('bkp-ativo').value = c.ativo ? '1' : '0';
+  document.getElementById('bkp-horario').value = c.horario;
+  document.getElementById('bkp-ultimo').textContent = c.log.length ? _bkpDataHoraBR(c.log[0].em) : '—';
+  document.getElementById('bkp-proximo').textContent = c.ativo
+    ? ('Próximo backup automático: ' + (c.ultimoDiaAuto === _bkpHojeISO() ? 'amanhã' : 'hoje') + ' às ' + c.horario)
+    : 'Backup automático desativado.';
+
+  const h = await _bkpGetPasta();
+  const perm = await _bkpPermissao(h, false);
+  document.getElementById('bkp-pasta-nome').textContent = h ? h.name : 'Nenhuma pasta selecionada';
+  const st = document.getElementById('bkp-pasta-status');
+  const btnAut = document.getElementById('bkp-btn-autorizar');
+  if (!h) { st.textContent = BKP_SUPORTA_PASTA ? 'Escolha a pasta onde os backups serão gravados.' : ''; btnAut.style.display = 'none'; }
+  else if (perm === 'granted') { st.innerHTML = '<span style="color:#58d68d">✔ Acesso autorizado</span>'; btnAut.style.display = 'none'; }
+  else { st.innerHTML = '<span style="color:#f5a623">⚠ O navegador pede nova autorização para gravar nesta pasta.</span>'; btnAut.style.display = ''; }
+
+  const tb = document.getElementById('tb-backup-log');
+  tb.innerHTML = c.log.length ? c.log.map(r =>
+    '<tr><td>' + _bkpDataHoraBR(r.em) + '</td>'
+    + '<td>' + (r.tipo === 'auto' ? '⏰ Automático' : '👤 Manual') + '</td>'
+    + '<td style="font-size:12px">' + escAttr(r.arquivo || '-') + '</td>'
+    + '<td>' + (r.registros != null ? r.registros : '-') + '</td>'
+    + '<td>' + (r.ok ? '<span class="badge badge-concluido">' + escAttr(r.destino || 'OK') + '</span>'
+                     : '<span style="color:#e74c3c;font-size:12px">' + escAttr(r.erro || 'Erro') + '</span>') + '</td></tr>'
+  ).join('') : '<tr><td colspan="5" class="empty-state"><p>Nenhum backup realizado ainda.</p></td></tr>';
+}
+
+async function escolherPastaBackup() {
+  if (!BKP_SUPORTA_PASTA) { toast('Navegador sem suporte. Use Chrome ou Edge.', 'error'); return; }
+  try {
+    const h = await window.showDirectoryPicker({ id: 'tw-backup', mode: 'readwrite' });
+    await _bkpSetPasta(h);
+    toast('Pasta de backup definida: ' + h.name);
+  } catch(e) {
+    if (e && e.name === 'AbortError') return;
+    toast('Não foi possível selecionar a pasta.', 'error');
+  }
+  carregarBackup();
+}
+async function autorizarPastaBackup() {
+  const h = await _bkpGetPasta();
+  const p = await _bkpPermissao(h, true);
+  toast(p === 'granted' ? 'Acesso à pasta autorizado.' : 'Acesso não autorizado.', p === 'granted' ? 'success' : 'error');
+  carregarBackup();
+}
+function salvarConfigBackup() {
+  const c = _bkpCfg();
+  const hr = document.getElementById('bkp-horario').value;
+  if (!hr) { toast('Informe o horário.', 'error'); return; }
+  c.ativo = document.getElementById('bkp-ativo').value === '1';
+  c.horario = hr;
+  _bkpSalvarCfg(c);
+  toast('Agendamento salvo.');
+  carregarBackup();
+}
+
+async function executarBackup(tipo) {
+  if (_bkpRodando) { if (tipo === 'manual') toast('Já existe um backup em andamento.', 'error'); return; }
+  _bkpRodando = true;
+  const btn = document.getElementById('bkp-btn-agora');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando backup...'; }
+  const agora = new Date();
+  const nome = 'backup_' + _bkpHojeISO() + '_' + String(agora.getHours()).padStart(2,'0') + String(agora.getMinutes()).padStart(2,'0') + '.json';
+  const reg = { em: agora.toISOString(), tipo: tipo, arquivo: nome, ok: false };
+  try {
+    // Permissão da pasta antes de buscar os dados (o pedido precisa do clique do usuário)
+    const h = BKP_SUPORTA_PASTA ? await _bkpGetPasta() : null;
+    const perm = await _bkpPermissao(h, tipo === 'manual');
+
+    const dados = { sistema: document.title, gerado_em: agora.toISOString(), tabelas: {} };
+    let total = 0;
+    for (const t of BKP_TABELAS) {
+      try { dados.tabelas[t] = await sbGet(t, ''); total += dados.tabelas[t].length; }
+      catch(e) { dados.tabelas[t] = { erro: String((e && e.message) || e) }; }
+    }
+    reg.registros = total;
+    const json = JSON.stringify(dados, null, 2);
+
+    if (h && perm === 'granted') {
+      const fh = await h.getFileHandle(nome, { create: true });
+      const w = await fh.createWritable();
+      await w.write(json);
+      await w.close();
+      reg.destino = 'Pasta: ' + h.name;
+    } else {
+      // Sem pasta autorizada: baixa o arquivo (vai para Downloads)
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = nome;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      reg.destino = 'Downloads';
+    }
+    reg.ok = true;
+    toast('Backup concluído (' + total + ' registros) — ' + reg.destino);
+  } catch(e) {
+    reg.erro = String((e && e.message) || e);
+    toast('Erro no backup: ' + reg.erro, 'error');
+  } finally {
+    const c = _bkpCfg();
+    c.log.unshift(reg);
+    c.log = c.log.slice(0, 30);
+    _bkpSalvarCfg(c);
+    _bkpRodando = false;
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Fazer backup agora'; }
+    if (telaAtual === 'backup') carregarBackup();
+  }
+}
+
+// Verifica a cada 30s se chegou o horário (ou se o horário de hoje já passou sem backup)
+function _bkpVerificarAgenda() {
+  const c = _bkpCfg();
+  if (!c.ativo || !c.horario) return;
+  const hoje = _bkpHojeISO();
+  if (c.ultimoDiaAuto === hoje) return;
+  const [hh, mm] = c.horario.split(':').map(Number);
+  const agora = new Date();
+  if (agora.getHours() * 60 + agora.getMinutes() < hh * 60 + mm) return;
+  c.ultimoDiaAuto = hoje;          // marca antes, para não disparar duas vezes
+  _bkpSalvarCfg(c);
+  executarBackup('auto');
+}
+function iniciarAgendadorBackup() {
+  if (_bkpTimer) return;
+  _bkpVerificarAgenda();
+  _bkpTimer = setInterval(_bkpVerificarAgenda, 30000);
 }
 
 // =============================================
@@ -2463,6 +2710,12 @@ async function carregarPagamentos() {
     adiantMap[a.lancamento_id].push(a);
   });
 
+  // Filtros de coluna (cabeçalho estilo Excel)
+  _xfPagBase = rows.slice();
+  _xfPagCtx.adiantMap = adiantMap;
+  rows = aplicarFiltrosColunaPag(rows);
+  atualizarBotoesFiltroPag();
+
   // Caixas de totais + base do PDF
   _pdfPagRows = rows.slice();
   _pdfPagAdiant = adiantMap;
@@ -3138,6 +3391,79 @@ function aplicarFiltrosColuna(docs) {
   return out;
 }
 
+// ---------- Filtro de cabeçalho — tela A PAGAR ----------
+var _xfPagFiltros = {};
+var _xfPagOrdem = null;
+var _xfPagBase = [];
+var _xfPagCtx = { adiantMap:{} };
+
+function _xfPagAdiant(l) {
+  return (_xfPagCtx.adiantMap[l.id] || []).reduce(function(s,a){ return s + parseFloat(a.valor||0); }, 0);
+}
+function _xfPagValorExib(l) {
+  var total = parseFloat(l.valor_total||0);
+  return l.pagamento_status === 'parcial' ? total - parseFloat(l.valor_pago||0) : total;
+}
+function valorColunaPag(l, col) {
+  var v;
+  switch (col) {
+    case 'pedido':  v = l.numero_pedido; break;
+    case 'cliente': v = l.cliente_nome; break;
+    case 'func':    v = l.funcionario_nome; break;
+    case 'total':   v = _xfMoeda(_xfPagValorExib(l)); break;
+    case 'adiant':  var ad = _xfPagAdiant(l); v = ad > 0 ? _xfMoeda(ad) : 'Sem adiantamento'; break;
+    case 'fim':     v = l.data_fim; break;
+    case 'status':  v = l.pagamento_status === 'parcial' ? 'Parcial' : 'A Pagar'; break;
+    default: v = '';
+  }
+  v = (v == null ? '' : String(v)).trim();
+  return v === '' ? _xfVAZIO : v;
+}
+function _xfChavePag(l, col) {
+  switch (col) {
+    case 'total':  return _xfPagValorExib(l);
+    case 'adiant': return _xfPagAdiant(l);
+    case 'fim':    return l.data_fim || '';
+    default: return valorColunaPag(l, col).toLowerCase();
+  }
+}
+function aplicarFiltrosColunaPag(docs) {
+  var out = docs.filter(function(l) {
+    return Object.keys(_xfPagFiltros).every(function(col) {
+      return _xfPagFiltros[col].indexOf(valorColunaPag(l, col)) !== -1;
+    });
+  });
+  if (_xfPagOrdem) {
+    var c = _xfPagOrdem.col, d = _xfPagOrdem.dir;
+    out.sort(function(a, b) {
+      var ka = _xfChavePag(a, c), kb = _xfChavePag(b, c);
+      if (typeof ka === 'number' && typeof kb === 'number') return (ka - kb) * d;
+      return String(ka).localeCompare(String(kb), 'pt-BR', { numeric:true }) * d;
+    });
+  }
+  return out;
+}
+function atualizarBotoesFiltroPag() {
+  document.querySelectorAll('#t-pagamentos .xf-btn').forEach(function(b) {
+    var col = b.id.replace('xfp-btn-', '');
+    var ativo = !!_xfPagFiltros[col] || (_xfPagOrdem && _xfPagOrdem.col === col);
+    b.classList.toggle('ativo', ativo);
+    b.textContent = _xfPagFiltros[col] ? '⧩' : (_xfPagOrdem && _xfPagOrdem.col === col ? (_xfPagOrdem.dir === 1 ? '↑' : '↓') : '▾');
+  });
+}
+
+// Estado do filtro conforme a tela ('lanc' = Lançamentos, 'pag' = A Pagar)
+function _xfEst(tela) {
+  if (tela === 'pag') return {
+    filtros: _xfPagFiltros, ordem: _xfPagOrdem, base: _xfPagBase, valor: valorColunaPag, chave: _xfChavePag,
+    setOrdem: function(o){ _xfPagOrdem = o; }, recarregar: carregarPagamentos
+  };
+  return {
+    filtros: _xfFiltros, ordem: _xfOrdem, base: _xfBase, valor: valorColunaLanc, chave: _xfChave,
+    setOrdem: function(o){ _xfOrdem = o; }, recarregar: carregarLancamentos
+  };
+}
+
 function atualizarBotoesFiltroColuna() {
   document.querySelectorAll('#t-lancamentos .xf-btn').forEach(function(b) {
     var col = b.id.replace('xf-btn-', '');
@@ -3157,35 +3483,38 @@ function _xfCliqueFora(e) {
   if (p && !p.contains(e.target) && !e.target.classList.contains('xf-btn')) fecharFiltroColuna();
 }
 
-function abrirFiltroColuna(ev, col) {
+function abrirFiltroColuna(ev, col, tela) {
   ev.stopPropagation();
+  tela = tela || 'lanc';
+  var E = _xfEst(tela);
   var jaAberto = document.getElementById('xf-pop');
-  if (jaAberto && jaAberto.dataset.col === col) { fecharFiltroColuna(); return; }
+  if (jaAberto && jaAberto.dataset.col === col && jaAberto.dataset.tela === tela) { fecharFiltroColuna(); return; }
   fecharFiltroColuna();
 
   // Valores possíveis: respeitam os filtros das OUTRAS colunas (como no Excel)
-  var base = _xfBase.filter(function(l) {
-    return Object.keys(_xfFiltros).every(function(c) {
-      return c === col || _xfFiltros[c].indexOf(valorColunaLanc(l, c)) !== -1;
+  var base = E.base.filter(function(l) {
+    return Object.keys(E.filtros).every(function(c) {
+      return c === col || E.filtros[c].indexOf(E.valor(l, c)) !== -1;
     });
   });
   var mapa = {};
-  base.forEach(function(l) { var v = valorColunaLanc(l, col); if (!(v in mapa)) mapa[v] = _xfChave(l, col); });
+  base.forEach(function(l) { var v = E.valor(l, col); if (!(v in mapa)) mapa[v] = E.chave(l, col); });
   var valores = Object.keys(mapa).sort(function(a, b) {
     if (a === _xfVAZIO) return 1; if (b === _xfVAZIO) return -1;
     var ka = mapa[a], kb = mapa[b];
     if (typeof ka === 'number' && typeof kb === 'number') return ka - kb;
     return String(ka).localeCompare(String(kb), 'pt-BR', { numeric:true });
   });
-  var sel = _xfFiltros[col] || valores;
+  var sel = E.filtros[col] || valores;
+  var a2 = '\'' + col + '\',\'' + tela + '\'';
 
   var pop = document.createElement('div');
-  pop.className = 'xf-pop'; pop.id = 'xf-pop'; pop.dataset.col = col;
+  pop.className = 'xf-pop'; pop.id = 'xf-pop'; pop.dataset.col = col; pop.dataset.tela = tela;
   pop.innerHTML =
-      '<button type="button" class="xf-acao" onclick="ordenarColuna(\'' + col + '\',1)">↑ Classificar de A a Z</button>'
-    + '<button type="button" class="xf-acao" onclick="ordenarColuna(\'' + col + '\',-1)">↓ Classificar de Z a A</button>'
+      '<button type="button" class="xf-acao" onclick="ordenarColuna(\'' + col + '\',1,\'' + tela + '\')">↑ Classificar de A a Z</button>'
+    + '<button type="button" class="xf-acao" onclick="ordenarColuna(\'' + col + '\',-1,\'' + tela + '\')">↓ Classificar de Z a A</button>'
     + '<div class="xf-sep"></div>'
-    + '<button type="button" class="xf-acao" onclick="limparFiltroColuna(\'' + col + '\')"' + (_xfFiltros[col] ? '' : ' disabled style="opacity:.4;cursor:default"') + '>✕ Limpar filtro desta coluna</button>'
+    + '<button type="button" class="xf-acao" onclick="limparFiltroColuna(' + a2 + ')"' + (E.filtros[col] ? '' : ' disabled style="opacity:.4;cursor:default"') + '>✕ Limpar filtro desta coluna</button>'
     + '<div class="xf-sep"></div>'
     + '<input type="text" placeholder="Pesquisar" oninput="xfPesquisar(this.value)" />'
     + '<div class="xf-lista">'
@@ -3197,7 +3526,7 @@ function abrirFiltroColuna(ev, col) {
     + '</div>'
     + '<div class="xf-rodape">'
     +   '<button type="button" class="btn btn-ghost btn-sm" onclick="fecharFiltroColuna()">Cancelar</button>'
-    +   '<button type="button" class="btn btn-primary btn-sm" onclick="xfAplicar(\'' + col + '\')">OK</button>'
+    +   '<button type="button" class="btn btn-primary btn-sm" onclick="xfAplicar(' + a2 + ')">OK</button>'
     + '</div>';
   document.body.appendChild(pop);
 
@@ -3229,25 +3558,28 @@ function xfSincTodos() {
   var t = document.getElementById('xf-todos');
   if (t) t.checked = itens.length > 0 && itens.every(function(lb){ return lb.querySelector('input').checked; });
 }
-function xfAplicar(col) {
+function xfAplicar(col, tela) {
+  var E = _xfEst(tela);
   var todos = Array.from(document.querySelectorAll('#xf-pop .xf-item input'));
   var marcados = todos.filter(function(i){ return i.checked && i.closest('.xf-item').style.display !== 'none'; }).map(function(i){ return i.value; });
   if (!marcados.length) { toast('Selecione ao menos um valor.', 'error'); return; }
-  if (marcados.length === todos.length) delete _xfFiltros[col];
-  else _xfFiltros[col] = marcados;
+  if (marcados.length === todos.length) delete E.filtros[col];
+  else E.filtros[col] = marcados;
   fecharFiltroColuna();
-  carregarLancamentos();
+  E.recarregar();
 }
-function ordenarColuna(col, dir) {
-  _xfOrdem = { col: col, dir: dir };
+function ordenarColuna(col, dir, tela) {
+  var E = _xfEst(tela);
+  E.setOrdem({ col: col, dir: dir });
   fecharFiltroColuna();
-  carregarLancamentos();
+  E.recarregar();
 }
-function limparFiltroColuna(col) {
-  delete _xfFiltros[col];
-  if (_xfOrdem && _xfOrdem.col === col) _xfOrdem = null;
+function limparFiltroColuna(col, tela) {
+  var E = _xfEst(tela);
+  delete E.filtros[col];
+  if (E.ordem && E.ordem.col === col) E.setOrdem(null);
   fecharFiltroColuna();
-  carregarLancamentos();
+  E.recarregar();
 }
 
 var _timerBuscaLanc = null;
